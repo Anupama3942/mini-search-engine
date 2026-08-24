@@ -31,6 +31,10 @@ def search():
     
     search_time = round(end_time - start_time, 4)
     
+    # Handle parsing errors from Stage 7
+    if isinstance(results, dict) and "error" in results:
+        return render_template("results.html", error=results["error"], query=query)
+    
     return render_template(
         "results.html", 
         query=query, 

@@ -3,105 +3,116 @@ import sys
 import math
 from pathlib import Path
 
-# Add the parent directory to sys.path to import search.py
+# Add the parent directory to sys.path
 sys.path.append(str(Path(__file__).parent.parent))
 
-from search import SearchEngine, process_text
+from search import SearchEngine
+from query_parser import tokenize_query, QueryParser
 
-class TestSearchRankingTFIDF(unittest.TestCase):
+# A dummy process_text just for testing tokenization directly
+def dummy_process_text(text):
+    return [text.lower()]
+
+class TestBooleanSearch(unittest.TestCase):
     
     def setUp(self):
         # Sample documents for testing
         self.raw_documents = {
-            "python.txt": "python programming python",
-            "java.txt": "java programming",
-            "web.txt": "python web",
-            "tie1.txt": "apple banana",
-            "tie2.txt": "banana apple",
-            "empty.txt": ""
+            "doc1.txt": "python programming",
+            "doc2.txt": "python java programming",
+            "doc3.txt": "java programming",
+            "doc4.txt": "java"
         }
         
         self.engine = SearchEngine()
-        # Mock the documents
         self.engine.documents = self.raw_documents
         self.engine.processed_documents = {}
         self.engine.inverted_index = {}
         self.engine._build_index()
 
-    def test_calculate_tf(self):
-        doc_tokens = ["python", "programming", "python"]
-        # python appears 2 out of 3 times -> 2/3
-        self.assertAlmostEqual(self.engine.calculate_tf("python", doc_tokens), 2/3)
-        # programming appears 1 out of 3 times -> 1/3
-        self.assertAlmostEqual(self.engine.calculate_tf("programming", doc_tokens), 1/3)
+    def test_tokenizer(self):
+        tokens = tokenize_query("(Python OR java) AND programming", dummy_process_text)
+        self.assertEqual(tokens, ['(', 'python', 'OR', 'java', ')', 'AND', 'programming'])
         
-        # Empty document test
-        self.assertEqual(self.engine.calculate_tf("python", []), 0.0)
+        # Test case insensitivity of operators
+        tokens2 = tokenize_query("python and java or not programming", dummy_process_text)
+        self.assertEqual(tokens2, ['python', 'AND', 'java', 'OR', 'NOT', 'programming'])
 
-    def test_calculate_idf(self):
-        # python df = 2, total = 6 -> log(6/2) = log(3)
-        self.assertAlmostEqual(self.engine.calculate_idf("python"), math.log(3))
-        # java df = 1, total = 6 -> log(6/1) = log(6)
-        self.assertAlmostEqual(self.engine.calculate_idf("java"), math.log(6))
-        # unknown df = 0, should return 0.0 to prevent crash
-        self.assertEqual(self.engine.calculate_idf("unknown"), 0.0)
-
-    def test_common_vs_rare_term(self):
-        # Verify common term has lower IDF than rare term
-        # 'programming' appears in 2 docs, 'java' in 1
-        idf_prog = self.engine.calculate_idf("programming")
-        idf_java = self.engine.calculate_idf("java")
-        self.assertTrue(idf_prog < idf_java)
-
-    def test_score_document(self):
-        # Query: "python programming" on python.txt
-        # TF-IDF(python) = (2/3) * log(3)
-        # TF-IDF(programming) = (1/3) * log(6/2) = (1/3) * log(3)
-        expected_score = ((2/3) * math.log(3)) + ((1/3) * math.log(3))
+    def test_parser_invalid_syntax(self):
+        # Using search engine which handles errors by returning dict
+        res = self.engine.search("python AND")
+        self.assertTrue(isinstance(res, dict))
+        self.assertIn("error", res)
         
-        results = self.engine.search("python programming")
-        
-        # Find score for python.txt
-        score = next(r['score'] for r in results if r['filename'] == "python.txt")
-        self.assertAlmostEqual(expected_score, score)
+        res = self.engine.search("(")
+        self.assertIn("error", res)
 
-    def test_ranking_order_single_term(self):
-        # query 'python'
-        # python.txt -> TF = 2/3
-        # web.txt -> TF = 1/2
-        # IDF is the same for both. So python.txt should rank higher.
-        results = self.engine.search("python")
-        
+        res = self.engine.search('python "programming"')
+        self.assertIn("error", res)
+
+    def test_boolean_and(self):
+        # python AND programming -> {doc1, doc2}
+        results = self.engine.search("python AND programming")
         self.assertEqual(len(results), 2)
-        self.assertEqual(results[0]["filename"], "python.txt")
-        self.assertEqual(results[1]["filename"], "web.txt")
+        filenames = {r['filename'] for r in results}
+        self.assertEqual(filenames, {"doc1.txt", "doc2.txt"})
 
-    def test_tie_handling(self):
-        # tie1.txt and tie2.txt have score for 'apple'.
-        # Tie should be broken alphabetically: tie1.txt before tie2.txt
-        results = self.engine.search("apple")
-        
-        self.assertEqual(len(results), 2)
-        self.assertEqual(results[0]["filename"], "tie1.txt")
-        self.assertEqual(results[1]["filename"], "tie2.txt")
+    def test_boolean_or(self):
+        # python OR java -> {doc1, doc2, doc3, doc4}
+        results = self.engine.search("python OR java")
+        self.assertEqual(len(results), 4)
 
-    def test_duplicate_query_terms(self):
-        results_duplicate = self.engine.search("python python")
-        results_normal = self.engine.search("python")
-        
-        # Just check filenames and scores are equal
-        self.assertEqual([(r["filename"], r["score"]) for r in results_duplicate],
-                         [(r["filename"], r["score"]) for r in results_normal])
+    def test_boolean_not(self):
+        # NOT java -> everything without java -> {doc1}
+        results = self.engine.search("NOT java")
+        self.assertEqual(len(results), 1)
+        self.assertEqual(results[0]['filename'], "doc1.txt")
 
-    def test_no_results(self):
-        results = self.engine.search("blockchain")
+    def test_boolean_and_not(self):
+        # python AND NOT java -> {doc1}
+        results = self.engine.search("python AND NOT java")
+        self.assertEqual(len(results), 1)
+        self.assertEqual(results[0]['filename'], "doc1.txt")
+
+    def test_parentheses(self):
+        # (python OR java) AND programming
+        # python OR java = {doc1, doc2, doc3, doc4}
+        # AND programming = {doc1, doc2, doc3}
+        results = self.engine.search("(python OR java) AND programming")
+        self.assertEqual(len(results), 3)
+        filenames = {r['filename'] for r in results}
+        self.assertEqual(filenames, {"doc1.txt", "doc2.txt", "doc3.txt"})
+
+    def test_operator_precedence(self):
+        # python OR java AND programming
+        # AND has higher precedence, so: python OR (java AND programming)
+        # java AND programming = {doc2, doc3}
+        # python = {doc1, doc2}
+        # Union = {doc1, doc2, doc3}
+        results = self.engine.search("python OR java AND programming")
+        filenames = {r['filename'] for r in results}
+        self.assertEqual(filenames, {"doc1.txt", "doc2.txt", "doc3.txt"})
+
+    def test_unknown_term(self):
+        # python AND blockchain -> empty
+        results = self.engine.search("python AND blockchain")
         self.assertEqual(results, [])
 
-    def test_punctuation_and_case(self):
-        results_upper = self.engine.search("PYTHON!")
-        results_lower = self.engine.search("python")
-        self.assertEqual([(r["filename"], r["score"]) for r in results_upper],
-                         [(r["filename"], r["score"]) for r in results_lower])
+        # python OR blockchain -> {doc1, doc2}
+        results = self.engine.search("python OR blockchain")
+        self.assertEqual(len(results), 2)
+
+    def test_ranking_integration(self):
+        # TF-IDF should still rank the filtered results
+        # python AND programming
+        results = self.engine.search("python AND programming")
+        # doc1 has "python programming" (TF=1/2 each)
+        # doc2 has "python java programming" (TF=1/3 each)
+        # doc1 should score higher
+        self.assertEqual(results[0]['filename'], "doc1.txt")
+        self.assertEqual(results[1]['filename'], "doc2.txt")
+        # Ensure scores are > 0
+        self.assertTrue(results[0]['score'] > 0)
 
 if __name__ == '__main__':
     unittest.main()

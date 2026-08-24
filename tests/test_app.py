@@ -24,6 +24,17 @@ class TestAppRoutes(unittest.TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertIn(b'Results found', response.data)
         
+    def test_search_boolean_query(self):
+        response = self.app.get('/search?q=python+AND+programming')
+        self.assertEqual(response.status_code, 200)
+        self.assertIn(b'Boolean Search', response.data)
+
+    def test_search_invalid_boolean_query(self):
+        # A bad query should return 200 but show the error message in the UI, not crash.
+        response = self.app.get('/search?q=python+AND')
+        self.assertEqual(response.status_code, 200)
+        self.assertIn(b'Invalid search query', response.data)
+
     def test_search_empty_query(self):
         response = self.app.get('/search?q=')
         self.assertEqual(response.status_code, 200)
@@ -40,14 +51,12 @@ class TestAppRoutes(unittest.TestCase):
         self.assertIn(b'Page Not Found', response.data)
 
     def test_xss_prevention(self):
-        # Pass a script tag to ensure it's escaped
         # The script should not execute, it should be shown safely.
         malicious_query = "<script>alert(1)</script>"
         response = self.app.get(f'/search?q={malicious_query}')
         self.assertEqual(response.status_code, 200)
         
-        # In Jinja, variables are autoescaped by default unless |safe is used.
-        # Check if the query was safely escaped in the output
+        # In Jinja, variables are autoescaped by default.
         self.assertNotIn(b'<script>alert(1)</script>', response.data)
         self.assertIn(b'&lt;script&gt;alert(1)&lt;/script&gt;', response.data)
 

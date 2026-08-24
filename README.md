@@ -9,10 +9,10 @@ Built as a learning project to understand Python fundamentals, Information Retri
 - Search through multiple text documents
 - Fast querying using an Inverted Index
 - Text processing pipeline (Stop-word removal, Normalization, Tokenization)
+- **Boolean Search (`AND`, `OR`, `NOT`, `( )`)**
 - **Search Ranking (TF-IDF)**
-- **Web Interface (Flask & HTML/CSS)**
+- Web Interface (Flask & HTML/CSS)
 - Snippet generation and query term highlighting
-- Handles basic punctuation and case-insensitivity
 - Tie-breaking logic for results with identical scores
 - Graceful error handling
 
@@ -24,42 +24,61 @@ Built as a learning project to understand Python fundamentals, Information Retri
 - HTML5 & CSS3
 - `pathlib`, `string`, `collections`, `math`, `html`, `re` (Python standard library)
 
-## Stage 6 — Web Interface
+## Stage 7 — Boolean & Advanced Query Search
 
-In Stage 6, the command-line search engine was upgraded to a fully functional local web application using the **Flask** microframework. 
+In Stage 7, the search engine was upgraded to support structured **Boolean queries**. Previously, a query like `python programming` just treated both words as positive terms to score. Now, the engine understands logical operations using Sets!
 
-### Why Flask?
-Flask is a lightweight Python web framework. It acts as the bridge between a user's web browser and our existing Python search engine. Instead of rewriting the search logic in JavaScript, Flask listens for HTTP requests, passes the user's query to the `SearchEngine` class, and then injects the ranked results into an HTML template to send back to the browser.
+### Boolean Filtering vs. TF-IDF Ranking
+It is very important to separate these two concepts:
+1. **Boolean Filtering:** Determines *which* documents are allowed to appear in the results.
+2. **TF-IDF Ranking:** Determines *what order* those allowed documents should be presented in.
+
+Boolean queries act as strict filters. If you search for `python AND NOT java`, a document containing `java` will be removed from the eligible set immediately. TF-IDF will then only rank the remaining documents based on the positive term `python`.
+
+### Supported Operators
+* **`AND`**: Both terms must exist in the document.
+  *(e.g., `python AND programming`)*
+* **`OR`**: At least one term must exist.
+  *(e.g., `python OR java`)*
+* **`NOT`**: Return documents that do not contain the term.
+  *(e.g., `NOT java`, `python AND NOT java`)*
+* **`( )`**: Control the order of evaluation.
+  *(e.g., `(python OR java) AND programming`)*
+
+### Operator Precedence
+If parentheses are not used, the engine evaluates operators in the following priority order (highest to lowest):
+1. **`Parentheses ( )`**
+2. **`NOT`**
+3. **`AND`**
+4. **`OR`**
+
+*Example:* `python OR java AND programming` is evaluated as `python OR (java AND programming)`.
 
 ### Application Architecture
 
 ```text
-       User
-        ↓
-    Web Browser
-        ↓
-      Flask (app.py)
-        ↓
-    Search Engine (search.py)
-        ↓
-  Text Processing
-        ↓
-  Inverted Index
-        ↓
-  TF-IDF Ranking
-        ↓
-  Ranked Results
-        ↓
-  Flask Template (results.html)
-        ↓
-    Web Browser
+       User Query
+            ↓
+  Boolean Query Tokenizer
+            ↓
+       Boolean Parser
+            ↓
+      Query Expression
+            ↓
+      Boolean Evaluation
+            ↓
+    Matching Document Set
+            ↓
+       TF-IDF Ranking
+            ↓
+       Ranked Results
+            ↓
+        Web Interface
 ```
 
-### Separation of Concerns
-The core search logic was refactored into a `SearchEngine` class, but it remains entirely independent of Flask. This means you can still run `python search.py` to use the CLI version, or `python app.py` to use the Web version. Both use the exact same TF-IDF ranking logic.
-
-### Snippets & Highlighting
-When a document matches, the search engine extracts the first 200 characters of the document to serve as a snippet. It uses the `html` library to safely escape the text (preventing Cross-Site Scripting / XSS attacks), and then uses Regular Expressions (`re`) to wrap the matching query terms in HTML `<mark>` tags for visual highlighting.
+* **Query Tokenization:** Splits the raw query string into words and operators while preserving parentheses.
+* **Query Parser:** Uses a "Recursive Descent Parser" to read the tokens and construct an Abstract Syntax Tree (AST) representing the logic.
+* **Boolean Evaluation:** Traverses the AST and uses Python Sets (`&`, `|`, `-`) against the Inverted Index to compute exactly which documents match the query.
 
 ## Project Structure
 
@@ -68,6 +87,7 @@ mini-search-engine/
 │
 ├── app.py              # Flask Web Application
 ├── search.py           # Core Search Engine & CLI
+├── query_parser.py     # Boolean Tokenizer, Parser, and AST
 │
 ├── documents/          # Folder containing .txt files
 │
@@ -122,14 +142,6 @@ mini-search-engine/
    python -m unittest tests/test_app.py tests/test_search.py
    ```
 
-## Example Search Flow
-1. **Search:** You enter `python programming` in the search box on the homepage and submit.
-2. **HTTP GET:** The browser sends a `GET` request to `/search?q=python+programming`.
-3. **Flask:** `app.py` receives the request, extracts the `q` parameter, and calls `search_engine.search("python programming")`.
-4. **Search Engine:** The TF-IDF ranker processes the query, identifies matching documents using the inverted index, calculates scores, generates snippets, and returns a sorted list of dictionaries.
-5. **Template Rendering:** Flask passes this list to `results.html`, which loops through the results to generate the final HTML page.
-6. **Browser:** The user sees a beautifully styled list of ranked search results.
-
 ## Future Roadmap
 
 This is a multi-stage project:
@@ -139,8 +151,8 @@ This is a multi-stage project:
 3. ✅ **Stage 3** — Text Processing
 4. ✅ **Stage 4** — Search Ranking
 5. ✅ **Stage 5** — TF-IDF Ranking
-6. ✅ **Stage 6** — Web Interface (current)
-7. Stage 7 — Advanced queries (AND, OR, NOT)
-8. Stage 8 — Database integration
-9. Stage 9 — Pagination & Caching
-10. Stage 10 — Deployment
+6. ✅ **Stage 6** — Web Interface
+7. ✅ **Stage 7** — Boolean Search (current)
+8. Stage 8 — Phrase Search
+9. Stage 9 — Database integration
+10. Stage 10 — Pagination & Deployment

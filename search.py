@@ -1,12 +1,20 @@
 """
-Mini Search Engine - Stage 6 (Core Logic)
-Refactored into a SearchEngine class to be used by both CLI and Flask Web Interface.
+Mini Search Engine - Stage 7 (Core Logic)
+Now using Boolean & Advanced Query Search.
 """
 
 from pathlib import Path
 import string
 import math
 import html
+import re
+
+from query_parser import (
+    tokenize_query, 
+    QueryParser, 
+    evaluate_query, 
+    extract_positive_terms
+)
 
 # Predefined stop words
 STOP_WORDS = {
@@ -51,30 +59,13 @@ def generate_snippet(document_text, query_terms):
     """
     Generate a short snippet and safely highlight query terms.
     """
-    # 1. Safely escape the HTML first to prevent XSS
     safe_text = html.escape(document_text)
-    
-    # Simple snippet extraction: just take the first 150 chars or try to center around the first match
-    # For Stage 6, we'll keep it simple and just take the first 200 chars.
     snippet = safe_text[:200]
     if len(safe_text) > 200:
         snippet += "..."
         
-    # 2. Highlight matching terms
-    # We do a case-insensitive replacement
     for term in query_terms:
-        # We need to escape the term in case the user typed something weird
         safe_term = html.escape(term)
-        # Note: A true robust highlighter would use regex with word boundaries, 
-        # but for this stage simple replacement (case-insensitive) is fine.
-        # We replace the exact term with a highlighted version.
-        # We must be careful not to double-highlight. 
-        # For simplicity, we just use a basic replace on lowercased terms but keeping original case is better.
-        # Since this is a beginner project, we can do a naive replace:
-        
-        # A simple case-insensitive replace without regex:
-        import re
-        # Use regex to replace case-insensitively, wrapping in <mark> tag
         pattern = re.compile(re.escape(safe_term), re.IGNORECASE)
         snippet = pattern.sub(lambda m: f"<mark>{m.group(0)}</mark>", snippet)
 
@@ -90,11 +81,9 @@ class SearchEngine:
             self._build_index()
 
     def _build_index(self):
-        # Process all documents
         for filename, content in self.documents.items():
             self.processed_documents[filename] = process_text(content)
             
-        # Build inverted index
         for filename, tokens in self.processed_documents.items():
             for token in tokens:
                 if token not in self.inverted_index:
@@ -117,32 +106,42 @@ class SearchEngine:
         if not self.documents:
             return []
             
-        query_tokens = process_text(query)
-        if not query_tokens:
-            return []
-            
-        unique_query_terms = list(set(query_tokens))
+        # 1. Tokenize and Parse the Boolean Query
+        try:
+            tokens = tokenize_query(query, process_text)
+            if not tokens:
+                return []
+            parser = QueryParser(tokens)
+            ast = parser.parse()
+            if not ast:
+                return []
+        except ValueError as e:
+            # Return a special dictionary format to signal an error safely
+            return {"error": str(e)}
         
-        matching_docs = set()
-        for token in unique_query_terms:
-            matching_docs = matching_docs.union(self.inverted_index.get(token, set()))
-            
+        # 2. Evaluate Boolean Expression (Filtering)
+        all_docs = set(self.documents.keys())
+        matching_docs = evaluate_query(ast, self.inverted_index, all_docs)
+        
+        # 3. Extract Positive Terms for TF-IDF Ranking
+        positive_terms = list(set(extract_positive_terms(ast)))
+        
+        # 4. Calculate Scores and Generate Results
         results = []
         for filename in matching_docs:
             doc_tokens = self.processed_documents[filename]
             
             score = 0.0
-            for term in unique_query_terms:
+            # Only rank using positive terms. 
+            # If there are no positive terms (e.g., query was `NOT python`), score remains 0.0
+            for term in positive_terms:
                 tf = self.calculate_tf(term, doc_tokens)
                 idf = self.calculate_idf(term)
                 score += (tf * idf)
                 
-            # Create a user-friendly title
             title = filename.replace(".txt", "").capitalize()
-            
-            # Generate snippet
             raw_text = self.documents[filename]
-            snippet = generate_snippet(raw_text, unique_query_terms)
+            snippet = generate_snippet(raw_text, positive_terms)
             
             results.append({
                 "filename": filename,
@@ -151,7 +150,7 @@ class SearchEngine:
                 "snippet": snippet
             })
             
-        # Sort by score descending, then filename ascending
+        # 5. Sort by score descending, then filename ascending (deterministic fallback)
         ranked_results = sorted(results, key=lambda x: (-x["score"], x["filename"]))
         return ranked_results
 
@@ -159,25 +158,32 @@ class SearchEngine:
 # Keep CLI functionality
 def main():
     print("=" * 30)
-    print("  MINI SEARCH ENGINE (CLI)")
+    print("  MINI SEARCH ENGINE (CLI) Stage 7")
     print("=" * 30)
 
     engine = SearchEngine()
     print(f"Documents loaded: {len(engine.documents)}")
     print(f"Unique terms indexed: {len(engine.inverted_index)}")
 
-    query = input("\nEnter search term: ").strip()
-    if not query:
-        print("\nPlease enter a search term.")
-        return
+    while True:
+        query = input("\nEnter search term (or 'exit' to quit): ").strip()
+        if query.lower() == 'exit':
+            break
+        if not query:
+            print("\nPlease enter a search term.")
+            continue
 
-    print("\nSearching...")
-    results = engine.search(query)
-    
-    print(f"\nResults found: {len(results)}\n")
-    for i, res in enumerate(results, start=1):
-        print(f"  {i}. {res['filename']}")
-        print(f"     TF-IDF Score: {res['score']:.4f}")
+        print("\nSearching...")
+        results = engine.search(query)
+        
+        if isinstance(results, dict) and "error" in results:
+            print(f"Error: {results['error']}")
+            continue
+            
+        print(f"\nResults found: {len(results)}\n")
+        for i, res in enumerate(results, start=1):
+            print(f"  {i}. {res['filename']}")
+            print(f"     TF-IDF Score: {res['score']:.4f}")
 
 if __name__ == "__main__":
     main()

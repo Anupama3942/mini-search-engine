@@ -14,7 +14,7 @@
 <div class="results-container">
     {% if error %}
         <div class="error-message">
-            <p>{{ error }}</p>
+            <p><strong>{{ error }}</strong></p>
             <p><a href="/">Return to Search</a></p>
         </div>
     {% elif not results %}
@@ -24,13 +24,15 @@
                 <p>Suggestions:</p>
                 <ul>
                     <li>Check the spelling.</li>
-                    <li>Try fewer words.</li>
+                    <li>Try fewer words or check your Boolean operators.</li>
                     <li>Try another search term.</li>
                 </ul>
             </div>
         </div>
     {% else %}
         <div class="results-meta">
+            <h2>Search results for: <em>{{ query }}</em></h2>
+            <p>Search type: <strong>Boolean Search</strong></p>
             <p>Results found: {{ results|length }} <span class="search-time">(Search time: {{ search_time }} seconds)</span></p>
         </div>
         
