@@ -7,63 +7,44 @@ Built as a learning project to understand Python fundamentals and the basic conc
 ## Features
 
 - Search through multiple text documents
-- Case-insensitive search
-- Handles basic punctuation
-- Multiple document support
-- Result counting and numbering
-- Simple CLI (Command-Line Interface)
 - Fast querying using an Inverted Index
 - Text processing pipeline (Stop-word removal, Normalization, Tokenization)
+- **Search Ranking (Term Frequency)**
+- Handles basic punctuation and case-insensitivity
+- Tie-breaking logic for results with identical scores
 - Graceful error handling
 
 ## Technologies
 
 - Python 3
-- `pathlib` (Python standard library)
-- `string` (Python standard library)
+- `pathlib`, `string`, `collections` (Python standard library)
 
 No external packages or frameworks are required.
 
-## Stage 3 — Text Processing
+## Stage 4 — Search Ranking
 
-What is text processing? Raw text in documents often contains punctuation, capital letters, and very common words (like "the", "is", "a") that aren't useful for searching. Before adding text to our Inverted Index, we "clean" it. This makes the index much more efficient and allows searches like "PYTHON!" and "python" to match perfectly.
+What is search ranking? In earlier stages, the engine simply found matching documents and displayed them in alphabetical order. But if a user searches for `"python programming"`, a document that mentions "python" 5 times is likely more relevant than a document that mentions it only once. **Ranking** ensures the "best matching documents" appear at the top.
 
-### Processing Pipeline
+### Ranking Method
 
-When reading documents (and when searching queries), we run the text through this pipeline:
-
-```
-Raw Text
-   ↓
-Lowercase
-   ↓
-Punctuation Removal
-   ↓
-Tokenization (Splitting into individual words)
-   ↓
-Stop Word Removal (Removing words like "is", "a", "the")
-   ↓
-Normalized Tokens
-   ↓
-Inverted Index (or Search Engine Lookup)
-```
+We use a simple **Term Frequency** (TF) scoring model:
+`Score = Sum of frequencies of query terms in the document`
 
 **Example:**
-- **Input:** `"Python, is a powerful programming language!"`
-- **Output:** `["python", "powerful", "programming", "language"]`
+* **Query:** `python programming`
+* **Document:** `"Python Python programming"`
+* **Score:** `python` (2) + `programming` (1) = **3**
 
-### Stop Words
-Stop words are extremely common words (e.g., "a", "an", "the", "is", "in") that appear in almost every English document. Because they are so common, they aren't very helpful for finding specific information. By filtering them out, we save space in our index and speed up our searches!
+### Sorting
 
-### What We Are NOT Doing Yet
-- **Stemming:** We are not reducing words to their root form (e.g., "programming" -> "program").
-- **Lemmatization:** We are not using dictionary-based morphological analysis.
-- **TF-IDF:** We are not scoring words based on how rare or important they are.
-- **Ranking:** The results are just sorted alphabetically, not by relevance.
-- **NLP Libraries:** Everything is still built with plain Python string operations!
+After calculating scores, we sort the results from highest score to lowest score using Python's built-in `sorted()` function.
+If two documents have the same score, they are sorted alphabetically by their filename (deterministic tie-breaking).
 
-### Handling Numbers
-For this stage, numbers (e.g., "3" in "Python 3") remain as standard tokens. They are not stripped out, allowing simple exact-match searches for numbers.
+### Limitations
+This simple frequency-based ranking is imperfect. For example, a document that repeats the word "Python" 100 times but provides no actual value will outrank a highly informative article that mentions "Python" only 5 times. Furthermore, it treats rare words and common words as equally important.
+
+## Next Stage
+The next stage will introduce **TF-IDF** (Term Frequency - Inverse Document Frequency) to improve relevance by weighting rare words more heavily than common words.
 
 ## Project Structure
 
@@ -76,6 +57,9 @@ mini-search-engine/
 │   ├── database.txt
 │   ├── networking.txt
 │   └── web.txt
+│
+├── tests/              # Unit tests
+│   └── test_search.py
 │
 ├── search.py           # Main search engine script
 ├── README.md           # This file
@@ -90,34 +74,33 @@ Make sure you have Python 3 installed, then run:
 python search.py
 ```
 
+To run the unit tests:
+```bash
+python -m unittest tests/test_search.py
+```
+
 ## Example
 
 ```
 ==============================
-  MINI SEARCH ENGINE (Stage 3)
+  MINI SEARCH ENGINE (Stage 4)
 ==============================
 
-6 documents loaded.
-Inverted index created with Text Processing.
-Unique processed words indexed: 270
+Documents loaded: 5
+Unique terms indexed: 270
 
-Enter search term (or type '--debug' to turn on processing demo): --debug
-
-[Debug Mode Enabled]
-Enter search term: Python, is a powerful programming language!
+Enter search term: python programming
 
 Searching...
 
-[DEBUG] Original: 'Python, is a powerful programming language!'
-[DEBUG] Without punctuation: 'python  is a powerful programming language '
-[DEBUG] Tokens: ['python', 'is', 'a', 'powerful', 'programming', 'language']
-[DEBUG] After stop words: ['python', 'powerful', 'programming', 'language']
+Results found: 3
 
-Results found: 6
-
-  1. database.txt
-  2. java.txt
-  ...
+  1. python.txt
+     Relevance Score: 3
+  2. web.txt
+     Relevance Score: 2
+  3. java.txt
+     Relevance Score: 1
 ```
 
 ## Future Roadmap
@@ -126,8 +109,8 @@ This is a multi-stage project:
 
 1. ✅ **Stage 1** — Basic document search
 2. ✅ **Stage 2** — Inverted Index 
-3. ✅ **Stage 3** — Text Processing (current)
-4. Stage 4 — Better search and ranking
+3. ✅ **Stage 3** — Text Processing
+4. ✅ **Stage 4** — Search Ranking (current)
 5. Stage 5 — TF-IDF scoring
 6. Stage 6 — Search snippets and highlighting
 7. Stage 7 — Advanced queries (AND, OR, NOT)
