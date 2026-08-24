@@ -1,0 +1,8 @@
+Computer networking is the practice of connecting computers and devices to share data and resources.
+The Internet is the largest example of a computer network, connecting billions of devices worldwide.
+Networks use protocols such as TCP/IP, HTTP, and DNS to communicate and transfer data reliably.
+A Local Area Network (LAN) connects devices within a small area like a home or office.
+A Wide Area Network (WAN) connects devices across large geographical distances.
+Routers, switches, and firewalls are common networking hardware used to manage traffic and security.
+Understanding networking is important for web development, cloud computing, and cybersecurity.
+Network programming in languages like Python and Java allows developers to build client-server applications.

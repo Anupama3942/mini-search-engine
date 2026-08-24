@@ -1,0 +1,8 @@
+Java is a popular object-oriented programming language developed by Sun Microsystems in 1995.
+It follows the principle of "Write Once, Run Anywhere" thanks to the Java Virtual Machine (JVM).
+Java is widely used for building enterprise applications, Android mobile apps, and large-scale systems.
+The language is statically typed, which means variable types must be declared before use.
+Java has a rich standard library and a massive ecosystem of frameworks like Spring and Hibernate.
+Many banks and financial institutions use Java for their backend systems because of its reliability.
+Java supports multithreading, which allows programs to perform multiple tasks at the same time.
+Learning Java helps programmers understand core concepts like classes, objects, inheritance, and polymorphism.

@@ -1,0 +1,8 @@
+A database is an organized collection of structured data stored electronically in a computer system.
+Databases are managed by Database Management Systems (DBMS) such as MySQL, PostgreSQL, and Oracle.
+SQL (Structured Query Language) is the standard language used to interact with relational databases.
+Common database operations include creating tables, inserting records, updating data, and running queries.
+Relational databases organize data into tables with rows and columns, linked by keys.
+NoSQL databases like MongoDB and Redis are used when flexible or unstructured data storage is needed.
+Database indexing improves query performance by allowing the system to find data without scanning every row.
+Understanding databases is essential for web development, data science, and backend programming.
