@@ -1,8 +1,8 @@
 # Mini Search Engine
 
-A simple command-line search engine built with Python. This project searches through `.txt` documents stored in a local folder and returns matching filenames.
+A command-line and web-based search engine built with Python. This project searches through `.txt` documents stored in a local folder and returns matching filenames.
 
-Built as a learning project to understand Python fundamentals and the basic concepts behind how search engines work.
+Built as a learning project to understand Python fundamentals, Information Retrieval, and Web Development.
 
 ## Features
 
@@ -10,6 +10,8 @@ Built as a learning project to understand Python fundamentals and the basic conc
 - Fast querying using an Inverted Index
 - Text processing pipeline (Stop-word removal, Normalization, Tokenization)
 - **Search Ranking (TF-IDF)**
+- **Web Interface (Flask & HTML/CSS)**
+- Snippet generation and query term highlighting
 - Handles basic punctuation and case-insensitivity
 - Tie-breaking logic for results with identical scores
 - Graceful error handling
@@ -17,104 +19,116 @@ Built as a learning project to understand Python fundamentals and the basic conc
 ## Technologies
 
 - Python 3
-- `pathlib`, `string`, `collections`, `math` (Python standard library)
+- Flask (Web Framework)
+- Jinja2 (Templating)
+- HTML5 & CSS3
+- `pathlib`, `string`, `collections`, `math`, `html`, `re` (Python standard library)
 
-No external packages or frameworks are required.
+## Stage 6 — Web Interface
 
-## Stage 5 — TF-IDF Ranking
+In Stage 6, the command-line search engine was upgraded to a fully functional local web application using the **Flask** microframework. 
 
-Why is TF-IDF introduced? In Stage 4, ranking was based merely on how many times a term appeared. If a user searched for "python programming", a document that repeated the word "programming" 500 times would win, even if another document perfectly balanced rare and common words. TF-IDF fixes this by punishing common words and rewarding rare words.
+### Why Flask?
+Flask is a lightweight Python web framework. It acts as the bridge between a user's web browser and our existing Python search engine. Instead of rewriting the search logic in JavaScript, Flask listens for HTTP requests, passes the user's query to the `SearchEngine` class, and then injects the ranked results into an HTML template to send back to the browser.
 
-### 1. Term Frequency (TF)
-`TF(t, d) = count(t, d) / total_terms(d)`
-How often does the term `t` appear in the document `d`? We divide by `total_terms` so that longer documents don't get an unfair advantage.
+### Application Architecture
 
-### 2. Document Frequency (DF)
-`DF(t) = number of documents containing t`
-How many documents does the term `t` appear in? Note that this counts *documents*, not total occurrences.
+```text
+       User
+        ↓
+    Web Browser
+        ↓
+      Flask (app.py)
+        ↓
+    Search Engine (search.py)
+        ↓
+  Text Processing
+        ↓
+  Inverted Index
+        ↓
+  TF-IDF Ranking
+        ↓
+  Ranked Results
+        ↓
+  Flask Template (results.html)
+        ↓
+    Web Browser
+```
 
-### 3. Inverse Document Frequency (IDF)
-`IDF(t) = log(N / DF(t))`
-This is the magic. If `N` (total documents) is 100, and "programming" appears in 95 of them, its IDF is `log(100/95) = 0.05` (very small). If "tensorflow" appears in 3 documents, its IDF is `log(100/3) = 3.5` (very large). Rare words get a higher weight.
+### Separation of Concerns
+The core search logic was refactored into a `SearchEngine` class, but it remains entirely independent of Flask. This means you can still run `python search.py` to use the CLI version, or `python app.py` to use the Web version. Both use the exact same TF-IDF ranking logic.
 
-### 4. TF-IDF
-`TF-IDF(t, d) = TF(t, d) * IDF(t)`
-The final score for a term in a document.
-
-### 5. Document Score
-`Score(d, q) = Σ TF-IDF(t, d)`
-The sum of the TF-IDF scores for each query term in the document.
-
-### Worked Example
-Imagine 3 documents (`N=3`):
-* `Doc1`: `"python programming python"`
-* `Doc2`: `"java programming"`
-* `Doc3`: `"python web"`
-
-For `"python"` in `Doc1`:
-* **TF:** "python" appears 2 times out of 3 total words -> `2 / 3 = 0.666`
-* **DF:** "python" appears in 2 documents (`Doc1` and `Doc3`) -> `2`
-* **IDF:** `log(3 / 2) = 0.405`
-* **TF-IDF:** `0.666 * 0.405 = 0.270`
-
-### Stage 4 vs Stage 5
-* **Stage 4:** Counted word frequencies directly. Highly vulnerable to keyword stuffing and over-valuing common words.
-* **Stage 5:** Balances word frequencies with word rarity. A term is only powerful if it appears frequently in a document *and* rarely across the entire document collection.
-
-### Limitations of TF-IDF
-TF-IDF is a powerful statistical measure but it doesn't understand context or meaning. "Apple" (the fruit) and "Apple" (the company) are treated identically. It also doesn't consider typos or synonyms. Modern search uses embeddings and neural ranking alongside statistical measures to solve this.
+### Snippets & Highlighting
+When a document matches, the search engine extracts the first 200 characters of the document to serve as a snippet. It uses the `html` library to safely escape the text (preventing Cross-Site Scripting / XSS attacks), and then uses Regular Expressions (`re`) to wrap the matching query terms in HTML `<mark>` tags for visual highlighting.
 
 ## Project Structure
 
-```
+```text
 mini-search-engine/
 │
-├── documents/          # Folder containing .txt files to search through
+├── app.py              # Flask Web Application
+├── search.py           # Core Search Engine & CLI
+│
+├── documents/          # Folder containing .txt files
+│
+├── templates/          # HTML Templates for Flask
+│   ├── base.html
+│   ├── index.html
+│   ├── results.html
+│   └── 404.html
+│
+├── static/             # Static Assets
+│   └── css/
+│       └── style.css
+│
 ├── tests/              # Unit tests
+│   ├── test_app.py
 │   └── test_search.py
-├── search.py           # Main search engine script
-├── README.md           # This file
-└── .gitignore          # Files and folders Git should ignore
+│
+├── requirements.txt
+├── README.md           
+└── .gitignore          
 ```
 
-## How to Run
+## How to Install & Run
 
-Make sure you have Python 3 installed, then run:
+1. **Create and activate a virtual environment (Recommended):**
+   ```bash
+   python -m venv .venv
+   # Windows:
+   .venv\Scripts\activate
+   # Mac/Linux:
+   source .venv/bin/activate
+   ```
 
-```bash
-python search.py
-```
+2. **Install dependencies:**
+   ```bash
+   pip install -r requirements.txt
+   ```
 
-To run the unit tests:
-```bash
-python -m unittest tests/test_search.py
-```
+3. **Run the Web Application:**
+   ```bash
+   python app.py
+   ```
+   Open your browser and navigate to `http://127.0.0.1:5000`
 
-## Example
+4. **(Optional) Run the CLI version:**
+   ```bash
+   python search.py
+   ```
 
-```
-==============================
-  MINI SEARCH ENGINE (Stage 5)
-==============================
+5. **Run tests:**
+   ```bash
+   python -m unittest tests/test_app.py tests/test_search.py
+   ```
 
-Documents loaded: 6
-Unique terms indexed: 270
-
-Enter search term: python programming
-
-Searching...
-
-Results found: 4
-
-  1. python.txt
-     TF-IDF Score: 0.1764
-  2. web.txt
-     TF-IDF Score: 0.1171
-  3. database.txt
-     TF-IDF Score: 0.0504
-  4. java.txt
-     TF-IDF Score: 0.0336
-```
+## Example Search Flow
+1. **Search:** You enter `python programming` in the search box on the homepage and submit.
+2. **HTTP GET:** The browser sends a `GET` request to `/search?q=python+programming`.
+3. **Flask:** `app.py` receives the request, extracts the `q` parameter, and calls `search_engine.search("python programming")`.
+4. **Search Engine:** The TF-IDF ranker processes the query, identifies matching documents using the inverted index, calculates scores, generates snippets, and returns a sorted list of dictionaries.
+5. **Template Rendering:** Flask passes this list to `results.html`, which loops through the results to generate the final HTML page.
+6. **Browser:** The user sees a beautifully styled list of ranked search results.
 
 ## Future Roadmap
 
@@ -124,9 +138,9 @@ This is a multi-stage project:
 2. ✅ **Stage 2** — Inverted Index 
 3. ✅ **Stage 3** — Text Processing
 4. ✅ **Stage 4** — Search Ranking
-5. ✅ **Stage 5** — TF-IDF Ranking (current)
-6. Stage 6 — Search snippets and highlighting
+5. ✅ **Stage 5** — TF-IDF Ranking
+6. ✅ **Stage 6** — Web Interface (current)
 7. Stage 7 — Advanced queries (AND, OR, NOT)
-8. Stage 8 — Web interface
-9. Stage 9 — Database integration
-10. Stage 10 — Testing and deployment
+8. Stage 8 — Database integration
+9. Stage 9 — Pagination & Caching
+10. Stage 10 — Deployment

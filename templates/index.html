@@ -1,0 +1,20 @@
+{% extends "base.html" %}
+
+{% block title %}Mini Search Engine{% endblock %}
+
+{% block content %}
+<div class="homepage">
+    <h1>MINI SEARCH ENGINE</h1>
+    <p class="subtitle">Search your document collection</p>
+    
+    <form action="/search" method="GET" class="search-form-large">
+        <label for="q" class="sr-only">Search query</label>
+        <input type="text" id="q" name="q" placeholder="Search anything..." required autofocus autocomplete="off">
+        <button type="submit">Search</button>
+    </form>
+    
+    <div class="stats">
+        <p><strong>{{ doc_count }}</strong> documents indexed &bull; <strong>{{ term_count }}</strong> unique terms indexed</p>
+    </div>
+</div>
+{% endblock %}

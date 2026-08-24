@@ -1,0 +1,49 @@
+{% extends "base.html" %}
+
+{% block title %}Search: {{ query }} - Mini Search Engine{% endblock %}
+
+{% block header_search %}
+<form action="/search" method="GET" class="search-form-small">
+    <label for="q-top" class="sr-only">Search query</label>
+    <input type="text" id="q-top" name="q" value="{{ query }}" required>
+    <button type="submit">Search</button>
+</form>
+{% endblock %}
+
+{% block content %}
+<div class="results-container">
+    {% if error %}
+        <div class="error-message">
+            <p>{{ error }}</p>
+            <p><a href="/">Return to Search</a></p>
+        </div>
+    {% elif not results %}
+        <div class="no-results">
+            <h2>No results found for: <em>"{{ query }}"</em></h2>
+            <div class="suggestions">
+                <p>Suggestions:</p>
+                <ul>
+                    <li>Check the spelling.</li>
+                    <li>Try fewer words.</li>
+                    <li>Try another search term.</li>
+                </ul>
+            </div>
+        </div>
+    {% else %}
+        <div class="results-meta">
+            <p>Results found: {{ results|length }} <span class="search-time">(Search time: {{ search_time }} seconds)</span></p>
+        </div>
+        
+        <ul class="results-list">
+            {% for result in results %}
+            <li class="result-item">
+                <h3 class="result-title">{{ result.title }}</h3>
+                <span class="result-filename">{{ result.filename }}</span>
+                <p class="result-snippet">{{ result.snippet | safe }}</p>
+                <span class="result-score">TF-IDF Score: {{ "%.4f"|format(result.score) }}</span>
+            </li>
+            {% endfor %}
+        </ul>
+    {% endif %}
+</div>
+{% endblock %}

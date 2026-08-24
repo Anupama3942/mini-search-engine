@@ -1,0 +1,267 @@
+/* Reset and Base Styles */
+* {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+}
+
+body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    line-height: 1.6;
+    color: #202124;
+    background-color: #fff;
+    display: flex;
+    flex-direction: column;
+    min-height: 100vh;
+}
+
+.container {
+    max-width: 800px;
+    margin: 0 auto;
+    padding: 0 20px;
+    width: 100%;
+}
+
+a {
+    color: #1a0dab;
+    text-decoration: none;
+}
+
+a:hover {
+    text-decoration: underline;
+}
+
+.sr-only {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    padding: 0;
+    margin: -1px;
+    overflow: hidden;
+    clip: rect(0,0,0,0);
+    border: 0;
+}
+
+/* Header & Top Bar */
+.top-bar {
+    border-bottom: 1px solid #ebebeb;
+    padding: 15px 0;
+    background-color: #f8f9fa;
+}
+
+.top-bar-content {
+    display: flex;
+    align-items: center;
+    justify-content: flex-start;
+    gap: 30px;
+    max-width: 1000px;
+}
+
+.logo {
+    font-size: 1.2rem;
+    font-weight: bold;
+    color: #4285f4;
+    text-decoration: none;
+}
+
+.logo:hover {
+    text-decoration: none;
+}
+
+/* Main Content area */
+.main-content {
+    flex: 1;
+    padding: 40px 20px;
+}
+
+/* Forms */
+input[type="text"] {
+    padding: 12px 20px;
+    border: 1px solid #dfe1e5;
+    border-radius: 24px;
+    font-size: 16px;
+    outline: none;
+    transition: box-shadow 0.2s;
+    width: 100%;
+}
+
+input[type="text"]:focus {
+    box-shadow: 0 1px 6px rgba(32,33,36,0.28);
+    border-color: rgba(223,225,229,0);
+}
+
+button {
+    padding: 12px 24px;
+    background-color: #f8f9fa;
+    border: 1px solid #f8f9fa;
+    border-radius: 4px;
+    color: #3c4043;
+    font-size: 14px;
+    cursor: pointer;
+    transition: background-color 0.2s, color 0.2s, border 0.2s;
+}
+
+button:hover, button:focus {
+    background-color: #e8eaed;
+    border: 1px solid #dadce0;
+    color: #202124;
+}
+
+/* Homepage */
+.homepage {
+    text-align: center;
+    margin-top: 10vh;
+}
+
+.homepage h1 {
+    font-size: 3rem;
+    margin-bottom: 10px;
+    color: #4285f4;
+}
+
+.subtitle {
+    color: #5f6368;
+    margin-bottom: 30px;
+}
+
+.search-form-large {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 20px;
+    max-width: 584px;
+    margin: 0 auto;
+}
+
+.search-form-large input {
+    border-radius: 24px;
+}
+
+.stats {
+    margin-top: 40px;
+    font-size: 0.9rem;
+    color: #70757a;
+}
+
+/* Results Top Bar */
+.search-form-small {
+    display: flex;
+    gap: 10px;
+    flex: 1;
+    max-width: 600px;
+}
+
+.search-form-small input {
+    padding: 10px 15px;
+}
+
+.search-form-small button {
+    border-radius: 24px;
+    padding: 10px 20px;
+}
+
+/* Results Page */
+.results-container {
+    max-width: 700px;
+}
+
+.results-meta {
+    color: #70757a;
+    font-size: 0.9rem;
+    margin-bottom: 20px;
+}
+
+.search-time {
+    margin-left: 10px;
+}
+
+.results-list {
+    list-style: none;
+}
+
+.result-item {
+    margin-bottom: 30px;
+}
+
+.result-title {
+    font-size: 1.25rem;
+    font-weight: 400;
+    margin-bottom: 2px;
+}
+
+.result-title {
+    color: #1a0dab;
+}
+
+.result-filename {
+    display: block;
+    color: #006621;
+    font-size: 0.9rem;
+    margin-bottom: 5px;
+}
+
+.result-snippet {
+    color: #4d5156;
+    font-size: 0.95rem;
+    line-height: 1.5;
+    word-wrap: break-word;
+}
+
+.result-snippet mark {
+    background-color: transparent;
+    font-weight: bold;
+    color: #202124;
+}
+
+.result-score {
+    display: inline-block;
+    margin-top: 5px;
+    font-size: 0.8rem;
+    color: #70757a;
+    background-color: #f1f3f4;
+    padding: 2px 6px;
+    border-radius: 4px;
+}
+
+/* Errors & No Results */
+.error-message, .no-results {
+    margin-top: 20px;
+}
+
+.suggestions {
+    margin-top: 20px;
+    color: #202124;
+}
+
+.suggestions ul {
+    margin-top: 10px;
+    margin-left: 20px;
+}
+
+/* Footer */
+footer {
+    background-color: #f2f2f2;
+    padding: 20px;
+    text-align: center;
+    color: #70757a;
+    font-size: 0.85rem;
+    border-top: 1px solid #e4e4e4;
+    margin-top: auto;
+}
+
+/* Responsive */
+@media (max-width: 600px) {
+    .top-bar-content {
+        flex-direction: column;
+        align-items: stretch;
+        gap: 15px;
+    }
+    
+    .homepage h1 {
+        font-size: 2rem;
+    }
+    
+    .search-form-small {
+        flex-direction: column;
+    }
+}
