@@ -13,6 +13,7 @@ Built as a learning project to understand Python fundamentals and the basic conc
 - Result counting and numbering
 - Simple CLI (Command-Line Interface)
 - Fast querying using an Inverted Index
+- Text processing pipeline (Stop-word removal, Normalization, Tokenization)
 - Graceful error handling
 
 ## Technologies
@@ -23,38 +24,46 @@ Built as a learning project to understand Python fundamentals and the basic conc
 
 No external packages or frameworks are required.
 
-## Stage 2 — Inverted Index
+## Stage 3 — Text Processing
 
-In Stage 1, the search engine checked every single document from beginning to end whenever a user performed a search. That is very slow! 
+What is text processing? Raw text in documents often contains punctuation, capital letters, and very common words (like "the", "is", "a") that aren't useful for searching. Before adding text to our Inverted Index, we "clean" it. This makes the index much more efficient and allows searches like "PYTHON!" and "python" to match perfectly.
 
-In Stage 2, we introduced an **Inverted Index**. Instead of scanning documents during a search, we pre-process the documents once to build a dictionary that maps each unique word to a set of documents containing that word.
+### Processing Pipeline
 
-**Why is it useful?** Searching becomes almost instant, no matter how many documents you have. A dictionary lookup is significantly faster on average than a linear scan through every file's text.
-
-### How it Works
+When reading documents (and when searching queries), we run the text through this pipeline:
 
 ```
-Documents
+Raw Text
    ↓
-Tokenization (Split into words)
+Lowercase
    ↓
-Normalization (Lowercase, remove punctuation)
+Punctuation Removal
    ↓
-Inverted Index Building (Map words to documents)
+Tokenization (Splitting into individual words)
    ↓
-User Query (e.g. "python")
+Stop Word Removal (Removing words like "is", "a", "the")
    ↓
-Dictionary Lookup (O(1) average time)
+Normalized Tokens
    ↓
-Matching Documents
+Inverted Index (or Search Engine Lookup)
 ```
 
-### Important Data Structures Used
+**Example:**
+- **Input:** `"Python, is a powerful programming language!"`
+- **Output:** `["python", "powerful", "programming", "language"]`
 
-* **Dictionary (`dict`)**: Maps a word (string) to the documents that contain it. 
-  Example: `"python" -> {"python.txt", "web.txt"}`
-* **Set (`set`)**: Holds the unique collection of document filenames for a given word. It prevents duplicates so a document isn't listed 5 times if a word appears 5 times in it.
-* **List (`list`)**: Used to return and sort the final ordered search results.
+### Stop Words
+Stop words are extremely common words (e.g., "a", "an", "the", "is", "in") that appear in almost every English document. Because they are so common, they aren't very helpful for finding specific information. By filtering them out, we save space in our index and speed up our searches!
+
+### What We Are NOT Doing Yet
+- **Stemming:** We are not reducing words to their root form (e.g., "programming" -> "program").
+- **Lemmatization:** We are not using dictionary-based morphological analysis.
+- **TF-IDF:** We are not scoring words based on how rare or important they are.
+- **Ranking:** The results are just sorted alphabetically, not by relevance.
+- **NLP Libraries:** Everything is still built with plain Python string operations!
+
+### Handling Numbers
+For this stage, numbers (e.g., "3" in "Python 3") remain as standard tokens. They are not stripped out, allowing simple exact-match searches for numbers.
 
 ## Project Structure
 
@@ -85,21 +94,30 @@ python search.py
 
 ```
 ==============================
-  MINI SEARCH ENGINE
+  MINI SEARCH ENGINE (Stage 3)
 ==============================
 
-5 documents loaded.
-Inverted index created.
-Unique words indexed: 288
+6 documents loaded.
+Inverted index created with Text Processing.
+Unique processed words indexed: 270
 
-Enter search term: python
+Enter search term (or type '--debug' to turn on processing demo): --debug
+
+[Debug Mode Enabled]
+Enter search term: Python, is a powerful programming language!
 
 Searching...
 
-Results found: 2
+[DEBUG] Original: 'Python, is a powerful programming language!'
+[DEBUG] Without punctuation: 'python  is a powerful programming language '
+[DEBUG] Tokens: ['python', 'is', 'a', 'powerful', 'programming', 'language']
+[DEBUG] After stop words: ['python', 'powerful', 'programming', 'language']
 
-  1. python.txt
-  2. web.txt
+Results found: 6
+
+  1. database.txt
+  2. java.txt
+  ...
 ```
 
 ## Future Roadmap
@@ -107,8 +125,8 @@ Results found: 2
 This is a multi-stage project:
 
 1. ✅ **Stage 1** — Basic document search
-2. ✅ **Stage 2** — Inverted Index (current)
-3. Stage 3 — Text preprocessing (stopwords, stemming)
+2. ✅ **Stage 2** — Inverted Index 
+3. ✅ **Stage 3** — Text Processing (current)
 4. Stage 4 — Better search and ranking
 5. Stage 5 — TF-IDF scoring
 6. Stage 6 — Search snippets and highlighting
