@@ -1,10 +1,11 @@
 """
-Mini Search Engine - Stage 4
-A command-line search engine using an Inverted Index, Text Processing, and basic Search Ranking.
+Mini Search Engine - Stage 5
+A command-line search engine using an Inverted Index, Text Processing, and TF-IDF Ranking.
 """
 
 from pathlib import Path
 import string
+import math
 from collections import Counter
 
 # Predefined stop words for learning purposes
@@ -86,37 +87,78 @@ def build_inverted_index(processed_documents):
             index[token].add(filename)
     return index
 
-def calculate_score(document_tokens, query_terms, debug=False):
+def calculate_tf(term, document_tokens):
     """
-    Calculate simple relevance score based on term frequency.
-    
-    1. Count term frequencies in the document using Counter.
-    2. Add up the frequencies of the unique query terms.
+    Calculate Term Frequency (TF).
+    TF = (Number of times term appears in document) / (Total terms in document)
     """
-    # Create a frequency table of words in the document
-    # Example: Counter(["python", "python", "programming"]) -> {"python": 2, "programming": 1}
-    doc_freq = Counter(document_tokens)
+    total_terms = len(document_tokens)
+    if total_terms == 0:
+        return 0.0
     
-    score = 0
+    # Count occurrences of the specific term
+    term_count = document_tokens.count(term)
+    return term_count / total_terms
+
+def calculate_document_frequency(term, inverted_index):
+    """
+    Calculate Document Frequency (DF).
+    DF = Number of documents containing the term.
+    """
+    # Using the inverted index gives us the set of matching documents.
+    # The length of this set is exactly the document frequency.
+    if term in inverted_index:
+        return len(inverted_index[term])
+    return 0
+
+def calculate_idf(term, inverted_index, total_documents):
+    """
+    Calculate Inverse Document Frequency (IDF).
+    IDF = log(Total documents / Document frequency)
+    """
+    df = calculate_document_frequency(term, inverted_index)
+    if df == 0:
+        return 0.0
+    
+    return math.log(total_documents / df)
+
+def calculate_tfidf(term, document_tokens, inverted_index, total_documents):
+    """
+    Calculate TF-IDF score for a specific term in a specific document.
+    TF-IDF = TF * IDF
+    """
+    tf = calculate_tf(term, document_tokens)
+    idf = calculate_idf(term, inverted_index, total_documents)
+    return tf * idf
+
+def score_document(document_tokens, query_terms, inverted_index, total_documents, debug=False):
+    """
+    Calculate the total TF-IDF score for a document against all query terms.
+    """
+    score = 0.0
     for term in query_terms:
-        term_count = doc_freq.get(term, 0)
-        score += term_count
-        if debug and term_count > 0:
-            print(f"       [DEBUG] '{term}': {term_count}")
+        term_tfidf = calculate_tfidf(term, document_tokens, inverted_index, total_documents)
+        score += term_tfidf
+        
+        if debug and term_tfidf > 0:
+            tf = calculate_tf(term, document_tokens)
+            idf = calculate_idf(term, inverted_index, total_documents)
+            print(f"       [DEBUG] '{term}': TF = {tf:.4f}, IDF = {idf:.4f}, TF-IDF = {term_tfidf:.4f}")
             
     return score
 
 def search_index(index, processed_documents, query, debug=False):
     """
-    Search the inverted index and rank the matching documents.
+    Search the inverted index and rank the matching documents using TF-IDF.
     """
+    total_documents = len(processed_documents)
+    
     # 1. Process the query using the exact same pipeline
     query_tokens = process_text(query, debug=debug)
     if not query_tokens:
         return []
         
     # Convert query terms into unique terms to avoid repeated query words artificially inflating scores.
-    # Example: "python python programming" -> {"python", "programming"}
     unique_query_terms = list(set(query_tokens))
     
     # 2. Find all matching documents (union of sets)
@@ -131,15 +173,11 @@ def search_index(index, processed_documents, query, debug=False):
         if debug:
             print(f"  [DEBUG] Scoring {filename}:")
         doc_tokens = processed_documents[filename]
-        score = calculate_score(doc_tokens, unique_query_terms, debug=debug)
+        score = score_document(doc_tokens, unique_query_terms, index, total_documents, debug=debug)
         results.append((filename, score))
     
     # 4. Sort results
-    # We sort by:
-    #  - score descending (highest first) -> we use -x[1]
-    #  - filename ascending (alphabetical tie-breaker) -> we use x[0]
-    # sorted() uses the 'key' function to determine the sort order.
-    # We return tuples of (-score, filename), and Python sorts them item by item.
+    # Sort by score descending (highest first) and filename ascending (alphabetical tie-breaker)
     ranked_results = sorted(results, key=lambda x: (-x[1], x[0]))
     
     return ranked_results
@@ -154,13 +192,13 @@ def display_results(results):
     print()
     for number, (filename, score) in enumerate(results, start=1):
         print(f"  {number}. {filename}")
-        print(f"     Relevance Score: {score}")
+        print(f"     TF-IDF Score: {score:.4f}")
 
 
 def main():
-    """Main function that runs Stage 4 of the Mini Search Engine."""
+    """Main function that runs Stage 5 of the Mini Search Engine."""
     print("=" * 30)
-    print("  MINI SEARCH ENGINE (Stage 4)")
+    print("  MINI SEARCH ENGINE (Stage 5)")
     print("=" * 30)
 
     documents = load_documents()
