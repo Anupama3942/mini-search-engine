@@ -16,16 +16,18 @@
     <div class="search-examples">
         <h3>Example searches</h3>
         <ul>
+            <li><a href="/search?q=&quot;machine+learning&quot;">"machine learning"</a></li>
             <li><a href="/search?q=python+AND+programming">python AND programming</a></li>
             <li><a href="/search?q=python+OR+java">python OR java</a></li>
-            <li><a href="/search?q=python+AND+NOT+java">python AND NOT java</a></li>
-            <li><a href="/search?q=(python+OR+java)+AND+programming">(python OR java) AND programming</a></li>
+            <li><a href="/search?q=&quot;machine+learning&quot;+AND+NOT+java">"machine learning" AND NOT java</a></li>
+            <li><a href="/search?q=(&quot;machine+learning&quot;+OR+&quot;deep+learning&quot;)+AND+python">("machine learning" OR "deep learning") AND python</a></li>
         </ul>
     </div>
     
     <div class="search-help">
         <h3>Search Syntax</h3>
         <ul class="help-list">
+            <li><strong>" "</strong>: Phrase Search. Require consecutive words. (e.g. <code>"machine learning"</code>)</li>
             <li><strong>AND</strong>: Both terms must be present. (e.g. <code>python AND programming</code>)</li>
             <li><strong>OR</strong>: At least one term must be present. (e.g. <code>python OR java</code>)</li>
             <li><strong>NOT</strong>: Exclude documents containing the term. (e.g. <code>NOT java</code>)</li>

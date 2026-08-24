@@ -44,6 +44,15 @@ class TestAppRoutes(unittest.TestCase):
         response = self.app.get('/search?q=blockchain')
         self.assertEqual(response.status_code, 200)
         self.assertIn(b'No results found', response.data)
+        
+    def test_search_phrase_query(self):
+        response = self.app.get('/search?q="python+programming"')
+        self.assertEqual(response.status_code, 200)
+        
+    def test_search_invalid_phrase_query(self):
+        response = self.app.get('/search?q="python+programming')
+        self.assertEqual(response.status_code, 200)
+        self.assertIn(b'Invalid phrase query. Please close the quotation marks.', response.data)
 
     def test_404_page(self):
         response = self.app.get('/unknown-page')

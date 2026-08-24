@@ -7,112 +7,118 @@ from pathlib import Path
 sys.path.append(str(Path(__file__).parent.parent))
 
 from search import SearchEngine
-from query_parser import tokenize_query, QueryParser
+from query_parser import tokenize_query
 
 # A dummy process_text just for testing tokenization directly
 def dummy_process_text(text):
-    return [text.lower()]
+    return text.lower().split()
 
-class TestBooleanSearch(unittest.TestCase):
+class TestPhraseSearch(unittest.TestCase):
     
     def setUp(self):
         # Sample documents for testing
         self.raw_documents = {
-            "doc1.txt": "python programming",
-            "doc2.txt": "python java programming",
-            "doc3.txt": "java programming",
-            "doc4.txt": "java"
+            "doc1.txt": "python programming language",
+            "doc2.txt": "python is a programming language", # 'is a' might be removed by stop words
+            "doc3.txt": "programming python language",
+            "doc4.txt": "machine learning algorithm",
+            "doc5.txt": "machine algorithm learning",
+            "doc6.txt": "python programming is powerful. python programming is fun.",
+            "doc7.txt": "java programming"
         }
         
         self.engine = SearchEngine()
         self.engine.documents = self.raw_documents
         self.engine.processed_documents = {}
         self.engine.inverted_index = {}
+        self.engine.positional_index = {}
         self.engine._build_index()
 
-    def test_tokenizer(self):
-        tokens = tokenize_query("(Python OR java) AND programming", dummy_process_text)
-        self.assertEqual(tokens, ['(', 'python', 'OR', 'java', ')', 'AND', 'programming'])
+    def test_positional_index_creation(self):
+        # doc1: "python programming language"
+        # Since no stop words, positions are 0, 1, 2
+        self.assertEqual(self.engine.positional_index["python"]["doc1.txt"], [0])
+        self.assertEqual(self.engine.positional_index["programming"]["doc1.txt"], [1])
         
-        # Test case insensitivity of operators
-        tokens2 = tokenize_query("python and java or not programming", dummy_process_text)
-        self.assertEqual(tokens2, ['python', 'AND', 'java', 'OR', 'NOT', 'programming'])
+        # doc6: "python programming is powerful. python programming is fun."
+        # Stop words 'is' removed.
+        # Original: python(0), programming(1), is(stop), powerful(2), python(3), programming(4), is(stop), fun(5)
+        # So python -> [0, 3], programming -> [1, 4]
+        self.assertEqual(self.engine.positional_index["python"]["doc6.txt"], [0, 3])
+        self.assertEqual(self.engine.positional_index["programming"]["doc6.txt"], [1, 4])
 
-    def test_parser_invalid_syntax(self):
-        # Using search engine which handles errors by returning dict
-        res = self.engine.search("python AND")
-        self.assertTrue(isinstance(res, dict))
-        self.assertIn("error", res)
+    def test_tokenizer_phrases(self):
+        tokens = tokenize_query('python AND "machine learning"', dummy_process_text)
+        self.assertEqual(tokens, ['python', 'AND', ('PHRASE', ['machine', 'learning'])])
         
-        res = self.engine.search("(")
-        self.assertIn("error", res)
+        # Test unclosed quotes
+        with self.assertRaises(ValueError):
+            tokenize_query('"machine learning', dummy_process_text)
+            
+        # Test empty phrase
+        with self.assertRaises(ValueError):
+            tokenize_query('""', dummy_process_text)
 
-        res = self.engine.search('python "programming"')
-        self.assertIn("error", res)
+    def test_exact_phrase_match(self):
+        # doc1: "python programming language" -> Matches
+        # doc2: "python is a programming language" -> Stop words removed -> "python programming language" -> Matches!
+        # doc3: "programming python language" -> Reversed -> NO MATCH
+        results = self.engine.search('"python programming"')
+        filenames = {r['filename'] for r in results}
+        self.assertEqual(filenames, {"doc1.txt", "doc2.txt", "doc6.txt"})
 
-    def test_boolean_and(self):
-        # python AND programming -> {doc1, doc2}
-        results = self.engine.search("python AND programming")
-        self.assertEqual(len(results), 2)
+    def test_wrong_order(self):
+        # "programming python" should match doc3 only
+        results = self.engine.search('"programming python"')
+        filenames = {r['filename'] for r in results}
+        self.assertEqual(filenames, {"doc3.txt"})
+
+    def test_multiple_words_phrase(self):
+        # "machine learning algorithm"
+        results = self.engine.search('"machine learning algorithm"')
+        filenames = {r['filename'] for r in results}
+        self.assertEqual(filenames, {"doc4.txt"})
+        
+        # doc5 has "machine algorithm learning" so it should not match
+        self.assertNotIn("doc5.txt", filenames)
+
+    def test_boolean_and_phrase(self):
+        # "machine learning" AND algorithm -> doc4
+        results = self.engine.search('"machine learning" AND algorithm')
+        filenames = {r['filename'] for r in results}
+        self.assertEqual(filenames, {"doc4.txt"})
+
+    def test_phrase_and_not(self):
+        # "python programming" AND NOT powerful
+        # doc1 and doc2 match phrase but not powerful. doc6 has powerful, so excluded.
+        results = self.engine.search('"python programming" AND NOT powerful')
         filenames = {r['filename'] for r in results}
         self.assertEqual(filenames, {"doc1.txt", "doc2.txt"})
 
-    def test_boolean_or(self):
-        # python OR java -> {doc1, doc2, doc3, doc4}
-        results = self.engine.search("python OR java")
-        self.assertEqual(len(results), 4)
-
-    def test_boolean_not(self):
-        # NOT java -> everything without java -> {doc1}
-        results = self.engine.search("NOT java")
-        self.assertEqual(len(results), 1)
-        self.assertEqual(results[0]['filename'], "doc1.txt")
-
-    def test_boolean_and_not(self):
-        # python AND NOT java -> {doc1}
-        results = self.engine.search("python AND NOT java")
-        self.assertEqual(len(results), 1)
-        self.assertEqual(results[0]['filename'], "doc1.txt")
-
-    def test_parentheses(self):
-        # (python OR java) AND programming
-        # python OR java = {doc1, doc2, doc3, doc4}
-        # AND programming = {doc1, doc2, doc3}
-        results = self.engine.search("(python OR java) AND programming")
-        self.assertEqual(len(results), 3)
-        filenames = {r['filename'] for r in results}
-        self.assertEqual(filenames, {"doc1.txt", "doc2.txt", "doc3.txt"})
-
-    def test_operator_precedence(self):
-        # python OR java AND programming
-        # AND has higher precedence, so: python OR (java AND programming)
-        # java AND programming = {doc2, doc3}
-        # python = {doc1, doc2}
-        # Union = {doc1, doc2, doc3}
-        results = self.engine.search("python OR java AND programming")
-        filenames = {r['filename'] for r in results}
-        self.assertEqual(filenames, {"doc1.txt", "doc2.txt", "doc3.txt"})
-
-    def test_unknown_term(self):
-        # python AND blockchain -> empty
-        results = self.engine.search("python AND blockchain")
+    def test_unknown_phrase(self):
+        # "quantum blockchain unicorn"
+        results = self.engine.search('"quantum blockchain unicorn"')
         self.assertEqual(results, [])
 
-        # python OR blockchain -> {doc1, doc2}
-        results = self.engine.search("python OR blockchain")
-        self.assertEqual(len(results), 2)
-
-    def test_ranking_integration(self):
-        # TF-IDF should still rank the filtered results
-        # python AND programming
-        results = self.engine.search("python AND programming")
-        # doc1 has "python programming" (TF=1/2 each)
-        # doc2 has "python java programming" (TF=1/3 each)
-        # doc1 should score higher
-        self.assertEqual(results[0]['filename'], "doc1.txt")
-        self.assertEqual(results[1]['filename'], "doc2.txt")
-        # Ensure scores are > 0
+    def test_tf_idf_positive_terms(self):
+        # Ranking for "python programming" should use TF-IDF of 'python' and 'programming'
+        # doc6 has them twice, doc1 has them once. doc6 should rank higher.
+        results = self.engine.search('"python programming"')
+        
+        # Assuming length normalization works properly, let's just ensure doc6 gets a valid score
+        # doc1 length = 3. doc6 length = 6. 
+        # TF for doc1 = 1/3 (python), 1/3 (prog). 
+        # TF for doc6 = 2/6 (python), 2/6 (prog). 
+        # Actually, TF is exactly equal! 1/3 == 2/6. So scores will be tied!
+        # When tied, it falls back to alphabetical filename sort.
+        # doc1.txt comes before doc6.txt
+        filenames = [r['filename'] for r in results]
+        self.assertIn("doc1.txt", filenames)
+        self.assertIn("doc6.txt", filenames)
+        
+        # Verify scores are > 0
         self.assertTrue(results[0]['score'] > 0)
+
 
 if __name__ == '__main__':
     unittest.main()

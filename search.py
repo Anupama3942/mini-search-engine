@@ -1,6 +1,6 @@
 """
-Mini Search Engine - Stage 7 (Core Logic)
-Now using Boolean & Advanced Query Search.
+Mini Search Engine - Stage 8 (Core Logic)
+Now using Phrase Search and Positional Indexes.
 """
 
 from pathlib import Path
@@ -76,19 +76,31 @@ class SearchEngine:
         self.documents = load_documents()
         self.processed_documents = {}
         self.inverted_index = {}
+        self.positional_index = {}
         
         if self.documents:
             self._build_index()
 
     def _build_index(self):
+        # Process and store tokens
         for filename, content in self.documents.items():
             self.processed_documents[filename] = process_text(content)
             
+        # Build inverted index and positional index
         for filename, tokens in self.processed_documents.items():
-            for token in tokens:
+            for position, token in enumerate(tokens):
+                # 1. Standard Inverted Index
                 if token not in self.inverted_index:
                     self.inverted_index[token] = set()
                 self.inverted_index[token].add(filename)
+                
+                # 2. Positional Index
+                # Structure: { term: { filename: [pos1, pos2] } }
+                if token not in self.positional_index:
+                    self.positional_index[token] = {}
+                if filename not in self.positional_index[token]:
+                    self.positional_index[token][filename] = []
+                self.positional_index[token][filename].append(position)
 
     def calculate_tf(self, term, document_tokens):
         total_terms = len(document_tokens)
@@ -106,7 +118,7 @@ class SearchEngine:
         if not self.documents:
             return []
             
-        # 1. Tokenize and Parse the Boolean Query
+        # 1. Tokenize and Parse the Boolean/Phrase Query
         try:
             tokens = tokenize_query(query, process_text)
             if not tokens:
@@ -116,12 +128,11 @@ class SearchEngine:
             if not ast:
                 return []
         except ValueError as e:
-            # Return a special dictionary format to signal an error safely
             return {"error": str(e)}
         
-        # 2. Evaluate Boolean Expression (Filtering)
+        # 2. Evaluate Expression (Filtering)
         all_docs = set(self.documents.keys())
-        matching_docs = evaluate_query(ast, self.inverted_index, all_docs)
+        matching_docs = evaluate_query(ast, self.inverted_index, all_docs, self.positional_index)
         
         # 3. Extract Positive Terms for TF-IDF Ranking
         positive_terms = list(set(extract_positive_terms(ast)))
@@ -132,8 +143,6 @@ class SearchEngine:
             doc_tokens = self.processed_documents[filename]
             
             score = 0.0
-            # Only rank using positive terms. 
-            # If there are no positive terms (e.g., query was `NOT python`), score remains 0.0
             for term in positive_terms:
                 tf = self.calculate_tf(term, doc_tokens)
                 idf = self.calculate_idf(term)
@@ -158,7 +167,7 @@ class SearchEngine:
 # Keep CLI functionality
 def main():
     print("=" * 30)
-    print("  MINI SEARCH ENGINE (CLI) Stage 7")
+    print("  MINI SEARCH ENGINE (CLI) Stage 8")
     print("=" * 30)
 
     engine = SearchEngine()

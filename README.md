@@ -9,12 +9,11 @@ Built as a learning project to understand Python fundamentals, Information Retri
 - Search through multiple text documents
 - Fast querying using an Inverted Index
 - Text processing pipeline (Stop-word removal, Normalization, Tokenization)
-- **Boolean Search (`AND`, `OR`, `NOT`, `( )`)**
-- **Search Ranking (TF-IDF)**
+- Boolean Search (`AND`, `OR`, `NOT`, `( )`)
+- **Phrase Search (`"exact phrase"`)**
+- Search Ranking (TF-IDF)
 - Web Interface (Flask & HTML/CSS)
 - Snippet generation and query term highlighting
-- Tie-breaking logic for results with identical scores
-- Graceful error handling
 
 ## Technologies
 
@@ -24,91 +23,53 @@ Built as a learning project to understand Python fundamentals, Information Retri
 - HTML5 & CSS3
 - `pathlib`, `string`, `collections`, `math`, `html`, `re` (Python standard library)
 
-## Stage 7 — Boolean & Advanced Query Search
+## Stage 8 — Phrase Search
 
-In Stage 7, the search engine was upgraded to support structured **Boolean queries**. Previously, a query like `python programming` just treated both words as positive terms to score. Now, the engine understands logical operations using Sets!
+In Stage 8, the engine was upgraded to support exact phrase matching by introducing a **Positional Inverted Index**.
 
-### Boolean Filtering vs. TF-IDF Ranking
-It is very important to separate these two concepts:
-1. **Boolean Filtering:** Determines *which* documents are allowed to appear in the results.
-2. **TF-IDF Ranking:** Determines *what order* those allowed documents should be presented in.
+### Why a Positional Index?
+A normal inverted index (Stage 2) tells you *which* documents contain a word, but not *where* the word is located inside that document. Because phrase searching requires words to be adjacent and in a specific order, the engine now records the sequence position of every word during indexing.
 
-Boolean queries act as strict filters. If you search for `python AND NOT java`, a document containing `java` will be removed from the eligible set immediately. TF-IDF will then only rank the remaining documents based on the positive term `python`.
+### How Phrase Search Works
+When searching for `"python programming"`:
+1. The engine checks the index for `python` and `programming`.
+2. It filters down to documents that contain **both** words.
+3. For each candidate document, it inspects the positions. It verifies that a position of `programming` is exactly `+1` from a position of `python`. 
+4. If they are consecutive and in the correct order, the phrase matches!
 
-### Supported Operators
-* **`AND`**: Both terms must exist in the document.
-  *(e.g., `python AND programming`)*
-* **`OR`**: At least one term must exist.
-  *(e.g., `python OR java`)*
-* **`NOT`**: Return documents that do not contain the term.
-  *(e.g., `NOT java`, `python AND NOT java`)*
-* **`( )`**: Control the order of evaluation.
-  *(e.g., `(python OR java) AND programming`)*
-
-### Operator Precedence
-If parentheses are not used, the engine evaluates operators in the following priority order (highest to lowest):
-1. **`Parentheses ( )`**
-2. **`NOT`**
-3. **`AND`**
-4. **`OR`**
-
-*Example:* `python OR java AND programming` is evaluated as `python OR (java AND programming)`.
+*Note: Positional checking occurs against the normalized text tokens (after punctuation and stop words are removed).*
 
 ### Application Architecture
 
 ```text
-       User Query
-            ↓
-  Boolean Query Tokenizer
-            ↓
-       Boolean Parser
-            ↓
-      Query Expression
-            ↓
-      Boolean Evaluation
-            ↓
-    Matching Document Set
-            ↓
-       TF-IDF Ranking
-            ↓
-       Ranked Results
-            ↓
-        Web Interface
+                    User Query
+                         ↓
+                Query Tokenizer
+                         ↓
+                  Query Parser
+                         ↓
+             ┌───────────┴───────────┐
+             ↓                       ↓
+          TERM                    PHRASE
+             ↓                       ↓
+     Inverted Index        Positional Index
+             ↓                       ↓
+             └───────────┬───────────┘
+                         ↓
+                 Boolean Evaluation
+                         ↓
+                Matching Documents
+                         ↓
+                  TF-IDF Ranking
+                         ↓
+                    Web Results
 ```
 
-* **Query Tokenization:** Splits the raw query string into words and operators while preserving parentheses.
-* **Query Parser:** Uses a "Recursive Descent Parser" to read the tokens and construct an Abstract Syntax Tree (AST) representing the logic.
-* **Boolean Evaluation:** Traverses the AST and uses Python Sets (`&`, `|`, `-`) against the Inverted Index to compute exactly which documents match the query.
-
-## Project Structure
-
-```text
-mini-search-engine/
-│
-├── app.py              # Flask Web Application
-├── search.py           # Core Search Engine & CLI
-├── query_parser.py     # Boolean Tokenizer, Parser, and AST
-│
-├── documents/          # Folder containing .txt files
-│
-├── templates/          # HTML Templates for Flask
-│   ├── base.html
-│   ├── index.html
-│   ├── results.html
-│   └── 404.html
-│
-├── static/             # Static Assets
-│   └── css/
-│       └── style.css
-│
-├── tests/              # Unit tests
-│   ├── test_app.py
-│   └── test_search.py
-│
-├── requirements.txt
-├── README.md           
-└── .gitignore          
-```
+### Advanced Boolean & Phrase Combinations
+Phrase searches behave as a single boolean entity, meaning they can be perfectly combined with advanced operators:
+* `"machine learning" AND python`
+* `"data science" OR "machine learning"`
+* `("deep learning" OR "neural networks") AND NOT java`
 
 ## How to Install & Run
 
@@ -152,7 +113,7 @@ This is a multi-stage project:
 4. ✅ **Stage 4** — Search Ranking
 5. ✅ **Stage 5** — TF-IDF Ranking
 6. ✅ **Stage 6** — Web Interface
-7. ✅ **Stage 7** — Boolean Search (current)
-8. Stage 8 — Phrase Search
-9. Stage 9 — Database integration
-10. Stage 10 — Pagination & Deployment
+7. ✅ **Stage 7** — Boolean Search 
+8. ✅ **Stage 8** — Phrase Search (current)
+9. Stage 9 — Fuzzy Search & Typo Tolerance
+10. Stage 10 — Database Integration
