@@ -8,17 +8,53 @@ Built as a learning project to understand Python fundamentals and the basic conc
 
 - Search through multiple text documents
 - Case-insensitive search
+- Handles basic punctuation
 - Multiple document support
 - Result counting and numbering
 - Simple CLI (Command-Line Interface)
+- Fast querying using an Inverted Index
 - Graceful error handling
 
 ## Technologies
 
 - Python 3
 - `pathlib` (Python standard library)
+- `string` (Python standard library)
 
 No external packages or frameworks are required.
+
+## Stage 2 — Inverted Index
+
+In Stage 1, the search engine checked every single document from beginning to end whenever a user performed a search. That is very slow! 
+
+In Stage 2, we introduced an **Inverted Index**. Instead of scanning documents during a search, we pre-process the documents once to build a dictionary that maps each unique word to a set of documents containing that word.
+
+**Why is it useful?** Searching becomes almost instant, no matter how many documents you have. A dictionary lookup is significantly faster on average than a linear scan through every file's text.
+
+### How it Works
+
+```
+Documents
+   ↓
+Tokenization (Split into words)
+   ↓
+Normalization (Lowercase, remove punctuation)
+   ↓
+Inverted Index Building (Map words to documents)
+   ↓
+User Query (e.g. "python")
+   ↓
+Dictionary Lookup (O(1) average time)
+   ↓
+Matching Documents
+```
+
+### Important Data Structures Used
+
+* **Dictionary (`dict`)**: Maps a word (string) to the documents that contain it. 
+  Example: `"python" -> {"python.txt", "web.txt"}`
+* **Set (`set`)**: Holds the unique collection of document filenames for a given word. It prevents duplicates so a document isn't listed 5 times if a word appears 5 times in it.
+* **List (`list`)**: Used to return and sort the final ordered search results.
 
 ## Project Structure
 
@@ -37,13 +73,6 @@ mini-search-engine/
 └── .gitignore          # Files and folders Git should ignore
 ```
 
-| File / Folder   | Purpose                                              |
-|-----------------|------------------------------------------------------|
-| `documents/`    | Holds all the `.txt` files that the engine searches   |
-| `search.py`     | The main Python program — loads files and runs search |
-| `README.md`     | Project documentation (you are reading it)            |
-| `.gitignore`    | Tells Git which files to exclude from version control |
-
 ## How to Run
 
 Make sure you have Python 3 installed, then run:
@@ -60,6 +89,8 @@ python search.py
 ==============================
 
 5 documents loaded.
+Inverted index created.
+Unique words indexed: 288
 
 Enter search term: python
 
@@ -71,29 +102,12 @@ Results found: 2
   2. web.txt
 ```
 
-## Concepts Learned
-
-Building this project covers the following Python and CS fundamentals:
-
-| Concept             | How It's Used                                                  |
-|---------------------|----------------------------------------------------------------|
-| **Variables**       | Storing the query, filenames, and file contents                |
-| **Lists**           | Collecting matching filenames in the search results            |
-| **Dictionaries**    | Mapping each filename to its content for fast lookup           |
-| **Functions**       | Organizing code into `load_documents()`, `search_documents()`, `main()` |
-| **Loops**           | Iterating over files and documents to read and search          |
-| **Conditions**      | Checking for empty input, missing directories, and matches     |
-| **File Handling**   | Reading `.txt` files safely using `with open()`                |
-| **pathlib**         | Finding the documents folder and listing `.txt` files          |
-| **String Operations** | `.lower()` for case-insensitive search, `.strip()` for input cleaning, `in` for substring matching |
-| **Searching**       | Linear search — checking every document for the query term     |
-
 ## Future Roadmap
 
-This is Stage 1 of a multi-stage project:
+This is a multi-stage project:
 
-1. ✅ **Stage 1** — Basic document search (current)
-2. Stage 2 — Inverted Index
+1. ✅ **Stage 1** — Basic document search
+2. ✅ **Stage 2** — Inverted Index (current)
 3. Stage 3 — Text preprocessing (stopwords, stemming)
 4. Stage 4 — Better search and ranking
 5. Stage 5 — TF-IDF scoring
