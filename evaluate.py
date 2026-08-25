@@ -55,15 +55,17 @@ def run_evaluation():
         print(f"{qtype.capitalize():<16} | {m['query_count']:<6} | {m['map']:<8.4f} | {m['mrr']:<8.4f} | {m['p@5']:<8.4f} | {m['r@5']:<8.4f}")
     print("-" * 68)
 
-    # 4. Ranking Algorithm Comparison: TF-IDF vs Frequency
+    # 4. Ranking Algorithm Comparison: BM25 vs TF-IDF vs Frequency
     ranking_comp = evaluator.compare_ranking_methods(engine)
-    print("\n[4] RANKING COMPARISON (TF-IDF vs Raw Frequency)")
+    print("\n[4] RANKING COMPARISON (BM25 vs TF-IDF vs Frequency)")
     print(f"{'Ranking Method':<22} | {'MAP':<8} | {'MRR':<8} | {'P@1':<8} | {'R@5':<8}")
     print("-" * 68)
+    bm_m = ranking_comp["bm25_ranking"]
     tf_m = ranking_comp["tfidf_ranking"]
     fq_m = ranking_comp["frequency_ranking"]
-    print(f"{'TF-IDF Ranking':<22} | {tf_m['map']:<8.4f} | {tf_m['mrr']:<8.4f} | {summary['p@1']:<8.4f} | {tf_m['r@5']:<8.4f}")
-    print(f"{'Frequency Ranking':<22} | {fq_m['map']:<8.4f} | {fq_m['mrr']:<8.4f} | {summary['p@1']:<8.4f} | {fq_m['r@5']:<8.4f}")
+    print(f"{'BM25 Ranking (k1=1.2)':<22} | {bm_m['map']:<8.4f} | {bm_m['mrr']:<8.4f} | {bm_m['p@1']:<8.4f} | {bm_m['r@5']:<8.4f}")
+    print(f"{'TF-IDF Ranking':<22} | {tf_m['map']:<8.4f} | {tf_m['mrr']:<8.4f} | {tf_m['p@1']:<8.4f} | {tf_m['r@5']:<8.4f}")
+    print(f"{'Frequency Ranking':<22} | {fq_m['map']:<8.4f} | {fq_m['mrr']:<8.4f} | {fq_m['p@1']:<8.4f} | {fq_m['r@5']:<8.4f}")
     print("-" * 68)
 
     # 5. Fuzzy Search Quality Trade-Off

@@ -1,7 +1,12 @@
 {
   "evaluation_version": "1.0",
-  "timestamp": "2026-08-25T03:09:30Z",
-  "evaluation_duration_seconds": 0.0434,
+  "ranking_algorithm": "bm25",
+  "bm25_params": {
+    "k1": 1.2,
+    "b": 0.75
+  },
+  "timestamp": "2026-08-25T03:15:46Z",
+  "evaluation_duration_seconds": 0.0446,
   "queries_evaluated": 25,
   "summary_metrics": {
     "precision": 0.92,
@@ -13,7 +18,7 @@
     "p@10": 0.208,
     "r@5": 0.992,
     "r@10": 1.0,
-    "map": 0.9951,
+    "map": 0.9884,
     "mrr": 1.0
   },
   "query_type_breakdown": {
@@ -21,13 +26,15 @@
       "query_count": 10,
       "map": 1.0,
       "mrr": 1.0,
+      "p@1": 0.8,
       "p@5": 0.34,
       "r@5": 1.0
     },
     "boolean": {
       "query_count": 5,
-      "map": 1.0,
+      "map": 0.9667,
       "mrr": 1.0,
+      "p@1": 1.0,
       "p@5": 0.52,
       "r@5": 1.0
     },
@@ -35,6 +42,7 @@
       "query_count": 5,
       "map": 1.0,
       "mrr": 1.0,
+      "p@1": 1.0,
       "p@5": 0.36,
       "r@5": 1.0
     },
@@ -42,6 +50,7 @@
       "query_count": 5,
       "map": 0.9753,
       "mrr": 1.0,
+      "p@1": 1.0,
       "p@5": 0.48,
       "r@5": 0.96
     }
@@ -80,6 +89,14 @@
   ],
   "worst_performing_queries": [
     {
+      "id": "q12",
+      "query": "(python OR java) AND web",
+      "ap": 0.8333,
+      "rr": 1.0,
+      "false_positives": 1,
+      "false_negatives": 0
+    },
+    {
       "id": "q20",
       "query": "programing",
       "ap": 0.8767,
@@ -106,14 +123,6 @@
     {
       "id": "q03",
       "query": "database",
-      "ap": 1.0,
-      "rr": 1.0,
-      "false_positives": 0,
-      "false_negatives": 0
-    },
-    {
-      "id": "q04",
-      "query": "networking",
       "ap": 1.0,
       "rr": 1.0,
       "false_positives": 0,
@@ -426,11 +435,11 @@
         "true_negatives": 1
       },
       "retrieved_documents": [
-        "test_docs.txt",
-        "java.txt",
-        "python.txt",
         "web.txt",
-        "networking.txt"
+        "java.txt",
+        "networking.txt",
+        "test_docs.txt",
+        "python.txt"
       ],
       "false_positives": [],
       "false_negatives": []
@@ -459,9 +468,9 @@
         "true_negatives": 3
       },
       "retrieved_documents": [
-        "database.txt",
         "python.txt",
-        "test_docs.txt"
+        "test_docs.txt",
+        "database.txt"
       ],
       "false_positives": [],
       "false_negatives": []
@@ -481,7 +490,7 @@
       "p@10": 0.2,
       "r@5": 1.0,
       "r@10": 1.0,
-      "average_precision": 1.0,
+      "average_precision": 0.8333,
       "reciprocal_rank": 1.0,
       "confusion_matrix": {
         "true_positives": 2,
@@ -491,8 +500,8 @@
       },
       "retrieved_documents": [
         "web.txt",
-        "python.txt",
-        "networking.txt"
+        "networking.txt",
+        "python.txt"
       ],
       "false_positives": [
         "networking.txt"
@@ -733,12 +742,12 @@
         "true_negatives": 0
       },
       "retrieved_documents": [
-        "database.txt",
-        "java.txt",
-        "networking.txt",
         "python.txt",
         "test_docs.txt",
-        "web.txt"
+        "networking.txt",
+        "web.txt",
+        "database.txt",
+        "java.txt"
       ],
       "false_positives": [
         "networking.txt"

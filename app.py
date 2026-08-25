@@ -1,10 +1,11 @@
 """
-Mini Search Engine - Stage 12 (Web Application)
-Flask Web Server with Search Analytics, Performance Dashboard, Health Checks, Quality Evaluation, and API Endpoints.
+Mini Search Engine - Stage 13 (Web Application)
+Flask Web Server with Search Analytics, Performance Dashboard, Health Checks, Quality Evaluation, BM25 Explain, and API Endpoints.
 """
 
 from flask import Flask, render_template, request, jsonify
 import time
+import config
 from search import SearchEngine
 from analytics import (
     get_summary_metrics,
@@ -18,7 +19,7 @@ from evaluation.evaluator import SearchEvaluator
 
 app = Flask(__name__)
 
-# Initialize search engine in memory when the app starts
+# Initialize search engine and evaluator in memory
 search_engine = SearchEngine()
 evaluator = SearchEvaluator()
 
@@ -34,18 +35,19 @@ def index():
 
 @app.route("/search")
 def search():
-    """Search route handling queries, caching results, tracking analytics, and displaying ranked results."""
+    """Search route handling queries, pluggable ranking strategies, caching, and analytics."""
     query = request.args.get("q", "").strip()
+    ranking = request.args.get("ranking", config.DEFAULT_RANKING_ALGORITHM).strip()
     
     if not query:
-        return render_template("results.html", error="Please enter a search term.", query="")
+        return render_template("results.html", error="Please enter a search term.", query="", ranking=ranking)
 
-    # Execute search with caching & analytics logging
-    results = search_engine.search(query, log_analytics=True)
+    # Execute search with specified ranking strategy
+    results = search_engine.search(query, log_analytics=True, ranking_algorithm=ranking)
     
-    # Handle parsing errors from Boolean/Phrase syntax
+    # Handle parsing or ranking errors
     if isinstance(results, dict) and "error" in results:
-        return render_template("results.html", error=results["error"], query=query)
+        return render_template("results.html", error=results["error"], query=query, ranking=ranking)
     
     search_time = round(results.timings.get("total_search_duration", 0.0), 4)
     
@@ -53,7 +55,8 @@ def search():
         "results.html", 
         query=query, 
         results=results, 
-        search_time=search_time
+        search_time=search_time,
+        ranking=ranking
     )
 
 
@@ -70,8 +73,8 @@ def analytics_dashboard():
     query_cache_stats = search_engine.query_cache.get_stats()
     fuzzy_cache_stats = search_engine.fuzzy_cache.get_stats()
 
-    # Search Quality Metrics (Stage 12)
-    quality_report = evaluator.evaluate_engine(search_engine, top_k=10)
+    # Search Quality Metrics (Stage 12 & 13)
+    quality_report = evaluator.evaluate_engine(search_engine, top_k=10, ranking_algorithm="bm25")
     ranking_comparison = evaluator.compare_ranking_methods(search_engine)
     fuzzy_tradeoff = evaluator.evaluate_fuzzy_tradeoff(search_engine)
 
@@ -88,7 +91,8 @@ def analytics_dashboard():
         fuzzy_cache_stats=fuzzy_cache_stats,
         quality=quality_report,
         ranking_comparison=ranking_comparison,
-        fuzzy_tradeoff=fuzzy_tradeoff
+        fuzzy_tradeoff=fuzzy_tradeoff,
+        bm25_params={"k1": config.BM25_K1, "b": config.BM25_B}
     )
 
 
@@ -98,7 +102,29 @@ def health():
     return jsonify(search_engine.health_check())
 
 
-# --- REST API Endpoints for Observability ---
+# --- REST API Endpoints ---
+
+@app.route("/api/search/explain")
+def api_explain_score():
+    """JSON API endpoint explaining how a document's ranking score was calculated."""
+    query = request.args.get("q", "").strip()
+    doc_id = request.args.get("doc", "").strip()
+    ranking = request.args.get("ranking", config.DEFAULT_RANKING_ALGORITHM).strip()
+    k1 = request.args.get("k1", type=float)
+    b = request.args.get("b", type=float)
+    
+    if not query or not doc_id:
+        return jsonify({"error": "Missing required parameters: 'q' and 'doc'."}), 400
+
+    explanation = search_engine.explain_score(
+        query=query, 
+        filename=doc_id, 
+        ranking_algorithm=ranking,
+        k1=k1,
+        b=b
+    )
+    return jsonify(explanation)
+
 
 @app.route("/api/analytics/summary")
 def api_summary():
@@ -136,7 +162,8 @@ def api_performance():
 @app.route("/api/analytics/quality")
 def api_quality():
     """JSON API endpoint returning Information Retrieval relevance and quality metrics."""
-    report = evaluator.evaluate_engine(search_engine, top_k=10)
+    ranking = request.args.get("ranking", config.DEFAULT_RANKING_ALGORITHM)
+    report = evaluator.evaluate_engine(search_engine, top_k=10, ranking_algorithm=ranking)
     return jsonify(report)
 
 

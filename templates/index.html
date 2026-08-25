@@ -5,29 +5,37 @@
 {% block content %}
 <div class="homepage">
     <h1>MINI SEARCH ENGINE</h1>
-    <p class="subtitle">Search your document collection</p>
+    <p class="subtitle">Search your document collection with BM25 & TF-IDF</p>
     
     <form action="/search" method="GET" class="search-form-large">
         <label for="q" class="sr-only">Search query</label>
-        <input type="text" id="q" name="q" placeholder="Search anything..." required autofocus autocomplete="off">
-        <button type="submit">Search</button>
+        <div style="display: flex; gap: 8px; width: 100%; max-width: 600px; margin: 0 auto;">
+            <input type="text" id="q" name="q" placeholder="Search anything..." required autofocus autocomplete="off" style="flex: 1;">
+            <select name="ranking" style="padding: 10px 14px; border: 1px solid #ccc; border-radius: 4px; background: #fff; font-size: 14px; cursor: pointer;">
+                <option value="bm25" selected>BM25 (Default)</option>
+                <option value="tfidf">TF-IDF</option>
+                <option value="frequency">Term Frequency</option>
+            </select>
+            <button type="submit">Search</button>
+        </div>
     </form>
     
     <div class="search-examples">
         <h3>Example searches</h3>
         <ul>
-            <li><a href="/search?q=pythn">pythn (Typo tolerance)</a></li>
-            <li><a href="/search?q=pythn+AND+programing">pythn AND programing</a></li>
-            <li><a href="/search?q=&quot;machine+learning&quot;">"machine learning"</a></li>
-            <li><a href="/search?q=python+AND+programming">python AND programming</a></li>
-            <li><a href="/search?q=python+OR+java">python OR java</a></li>
-            <li><a href="/search?q=&quot;machine+learning&quot;+AND+NOT+java">"machine learning" AND NOT java</a></li>
+            <li><a href="/search?q=pythn&ranking=bm25">pythn (Typo tolerance)</a></li>
+            <li><a href="/search?q=pythn+AND+programing&ranking=bm25">pythn AND programing</a></li>
+            <li><a href="/search?q=&quot;machine+learning&quot;&ranking=bm25">"machine learning"</a></li>
+            <li><a href="/search?q=python+AND+programming&ranking=bm25">python AND programming</a></li>
+            <li><a href="/search?q=python+OR+java&ranking=bm25">python OR java</a></li>
+            <li><a href="/search?q=&quot;machine+learning&quot;+AND+NOT+java&ranking=bm25">"machine learning" AND NOT java</a></li>
         </ul>
     </div>
     
     <div class="search-help">
         <h3>Search Syntax & Features</h3>
         <ul class="help-list">
+            <li><strong>BM25 Ranking</strong>: State-of-the-art probabilistic ranking with term-frequency saturation and document length normalization.</li>
             <li><strong>Typo Tolerance</strong>: Automatically detects typos using Levenshtein distance (e.g. <code>pythn</code> &rarr; <code>python</code>).</li>
             <li><strong>" " (Quotes)</strong>: Phrase Search. Requires consecutive words in exact order. (e.g. <code>"machine learning"</code>)</li>
             <li><strong>AND</strong>: Both terms must be present. (e.g. <code>python AND programming</code>)</li>

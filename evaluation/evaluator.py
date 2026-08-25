@@ -1,5 +1,5 @@
 """
-Mini Search Engine - Stage 12
+Mini Search Engine - Stage 13
 Search Quality Evaluator & Relevance Testing Framework
 """
 
@@ -95,7 +95,14 @@ class SearchEvaluator:
         with open(self.dataset_path, "r", encoding="utf-8") as f:
             return json.load(f)
 
-    def evaluate_engine(self, engine, top_k: int = 10) -> Dict[str, Any]:
+    def evaluate_engine(
+        self, 
+        engine, 
+        top_k: int = 10,
+        ranking_algorithm: str = config.DEFAULT_RANKING_ALGORITHM,
+        k1: Optional[float] = None,
+        b: Optional[float] = None
+    ) -> Dict[str, Any]:
         """Run all evaluation queries and compute overall and per-query IR metrics."""
         queries = self.dataset.get("queries", [])
         all_documents = list(engine.documents.keys())
@@ -122,8 +129,15 @@ class SearchEvaluator:
             qtype = q_item.get("query_type", "normal")
             ground_truth = q_item.get("relevant_documents", [])
 
-            # Run search (read-only evaluation)
-            search_results = engine.search(query_str, log_analytics=False, top_k=top_k)
+            # Run search with specified ranking strategy
+            search_results = engine.search(
+                query_str, 
+                log_analytics=False, 
+                top_k=top_k,
+                ranking_algorithm=ranking_algorithm,
+                k1=k1,
+                b=b
+            )
             retrieved_docs = [r["filename"] for r in search_results] if not isinstance(search_results, dict) else []
 
             # Compute individual metrics
@@ -183,9 +197,10 @@ class SearchEvaluator:
 
             # Accumulate per-type metrics
             if qtype not in type_metrics:
-                type_metrics[qtype] = {"ap": [], "rr": [], "p5": [], "r5": [], "count": 0}
+                type_metrics[qtype] = {"ap": [], "rr": [], "p1": [], "p5": [], "r5": [], "count": 0}
             type_metrics[qtype]["ap"].append(ap)
             type_metrics[qtype]["rr"].append(rr)
+            type_metrics[qtype]["p1"].append(p1)
             type_metrics[qtype]["p5"].append(p5)
             type_metrics[qtype]["r5"].append(r5)
             type_metrics[qtype]["count"] += 1
@@ -212,6 +227,7 @@ class SearchEvaluator:
                 "query_count": m["count"],
                 "map": round(sum(m["ap"]) / len(m["ap"]), 4) if m["ap"] else 0.0,
                 "mrr": round(sum(m["rr"]) / len(m["rr"]), 4) if m["rr"] else 0.0,
+                "p@1": round(sum(m["p1"]) / len(m["p1"]), 4) if m["p1"] else 0.0,
                 "p@5": round(sum(m["p5"]) / len(m["p5"]), 4) if m["p5"] else 0.0,
                 "r@5": round(sum(m["r5"]) / len(m["r5"]), 4) if m["r5"] else 0.0,
             }
@@ -223,6 +239,8 @@ class SearchEvaluator:
 
         report = {
             "evaluation_version": self.dataset.get("version", "1.0"),
+            "ranking_algorithm": ranking_algorithm,
+            "bm25_params": {"k1": k1 or config.BM25_K1, "b": b or config.BM25_B} if ranking_algorithm == "bm25" else None,
             "timestamp": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
             "evaluation_duration_seconds": eval_duration,
             "queries_evaluated": len(queries),
@@ -253,55 +271,34 @@ class SearchEvaluator:
 
         return report
 
-    def compare_ranking_methods(self, engine) -> Dict[str, Any]:
-        """Compare TF-IDF ranking against raw Term Frequency / Unranked baseline."""
-        # Evaluate standard engine (TF-IDF)
-        tfidf_report = self.evaluate_engine(engine)
-        
-        # Simulate simple frequency ranking by evaluating term frequency scores
-        queries = self.dataset.get("queries", [])
-        tf_ap = []
-        tf_rr = []
-        tf_p5 = []
-        tf_r5 = []
-
-        for q_item in queries:
-            query_str = q_item["query"]
-            ground_truth = q_item.get("relevant_documents", [])
-            
-            # Retrieve candidates and rank purely by frequency sum
-            res = engine.search(query_str, log_analytics=False)
-            if isinstance(res, list):
-                # Re-rank by raw term count across doc tokens
-                ranked_by_tf = sorted(
-                    res, 
-                    key=lambda r: sum(engine.term_counts.get(r["filename"], {}).values()), 
-                    reverse=True
-                )
-                retrieved_tf = [r["filename"] for r in ranked_by_tf]
-            else:
-                retrieved_tf = []
-
-            tf_ap.append(average_precision(retrieved_tf, ground_truth))
-            tf_rr.append(reciprocal_rank(retrieved_tf, ground_truth))
-            tf_p5.append(precision_at_k(retrieved_tf, ground_truth, 5))
-            tf_r5.append(recall_at_k(retrieved_tf, ground_truth, 5))
-
-        tf_summary = {
-            "map": mean_average_precision(tf_ap),
-            "mrr": mean_reciprocal_rank(tf_rr),
-            "p@5": round(sum(tf_p5) / len(tf_p5), 4) if tf_p5 else 0.0,
-            "r@5": round(sum(tf_r5) / len(tf_r5), 4) if tf_r5 else 0.0,
-        }
+    def compare_ranking_methods(self, engine, top_k: int = 10) -> Dict[str, Any]:
+        """Compare all 3 ranking algorithms: BM25, TF-IDF, and Frequency."""
+        bm25_rep = self.evaluate_engine(engine, top_k=top_k, ranking_algorithm="bm25")
+        tfidf_rep = self.evaluate_engine(engine, top_k=top_k, ranking_algorithm="tfidf")
+        freq_rep = self.evaluate_engine(engine, top_k=top_k, ranking_algorithm="frequency")
 
         return {
-            "tfidf_ranking": {
-                "map": tfidf_report["summary_metrics"]["map"],
-                "mrr": tfidf_report["summary_metrics"]["mrr"],
-                "p@5": tfidf_report["summary_metrics"]["p@5"],
-                "r@5": tfidf_report["summary_metrics"]["r@5"],
+            "bm25_ranking": {
+                "map": bm25_rep["summary_metrics"]["map"],
+                "mrr": bm25_rep["summary_metrics"]["mrr"],
+                "p@1": bm25_rep["summary_metrics"]["p@1"],
+                "p@5": bm25_rep["summary_metrics"]["p@5"],
+                "r@5": bm25_rep["summary_metrics"]["r@5"],
             },
-            "frequency_ranking": tf_summary
+            "tfidf_ranking": {
+                "map": tfidf_rep["summary_metrics"]["map"],
+                "mrr": tfidf_rep["summary_metrics"]["mrr"],
+                "p@1": tfidf_rep["summary_metrics"]["p@1"],
+                "p@5": tfidf_rep["summary_metrics"]["p@5"],
+                "r@5": tfidf_rep["summary_metrics"]["r@5"],
+            },
+            "frequency_ranking": {
+                "map": freq_rep["summary_metrics"]["map"],
+                "mrr": freq_rep["summary_metrics"]["mrr"],
+                "p@1": freq_rep["summary_metrics"]["p@1"],
+                "p@5": freq_rep["summary_metrics"]["p@5"],
+                "r@5": freq_rep["summary_metrics"]["r@5"],
+            }
         }
 
     def evaluate_fuzzy_tradeoff(self, engine) -> Dict[str, Any]:
@@ -311,21 +308,21 @@ class SearchEvaluator:
             return {}
 
         # 1. Fuzzy ON (standard)
-        on_ap, on_rr, on_p5, on_r5 = [], [], [], []
+        on_ap, on_rr, on_p1, on_p5, on_r5 = [], [], [], [], []
         for q in fuzzy_queries:
             gt = q.get("relevant_documents", [])
             res = engine.search(q["query"], log_analytics=False)
             ret = [r["filename"] for r in res] if isinstance(res, list) else []
             on_ap.append(average_precision(ret, gt))
             on_rr.append(reciprocal_rank(ret, gt))
+            on_p1.append(precision_at_k(ret, gt, 1))
             on_p5.append(precision_at_k(ret, gt, 5))
             on_r5.append(recall_at_k(ret, gt, 5))
 
         # 2. Fuzzy OFF (exact lookup without correction)
-        off_ap, off_rr, off_p5, off_r5 = [], [], [], []
+        off_ap, off_rr, off_p1, off_p5, off_r5 = [], [], [], [], []
         for q in fuzzy_queries:
             gt = q.get("relevant_documents", [])
-            # Search without typo resolution
             tokens = q["query"].lower().split()
             ret_docs = set()
             for t in tokens:
@@ -333,6 +330,7 @@ class SearchEvaluator:
             ret = list(ret_docs)
             off_ap.append(average_precision(ret, gt))
             off_rr.append(reciprocal_rank(ret, gt))
+            off_p1.append(precision_at_k(ret, gt, 1))
             off_p5.append(precision_at_k(ret, gt, 5))
             off_r5.append(recall_at_k(ret, gt, 5))
 
@@ -340,12 +338,14 @@ class SearchEvaluator:
             "fuzzy_enabled": {
                 "map": mean_average_precision(on_ap),
                 "mrr": mean_reciprocal_rank(on_rr),
+                "p@1": round(sum(on_p1) / len(on_p1), 4),
                 "p@5": round(sum(on_p5) / len(on_p5), 4),
                 "r@5": round(sum(on_r5) / len(on_r5), 4)
             },
             "fuzzy_disabled": {
                 "map": mean_average_precision(off_ap),
                 "mrr": mean_reciprocal_rank(off_rr),
+                "p@1": round(sum(off_p1) / len(off_p1), 4),
                 "p@5": round(sum(off_p5) / len(off_p5), 4),
                 "r@5": round(sum(off_r5) / len(off_r5), 4)
             }

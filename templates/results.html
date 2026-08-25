@@ -3,9 +3,14 @@
 {% block title %}Search: {{ query }} - Mini Search Engine{% endblock %}
 
 {% block header_search %}
-<form action="/search" method="GET" class="search-form-small">
+<form action="/search" method="GET" class="search-form-small" style="display: flex; gap: 6px; align-items: center;">
     <label for="q-top" class="sr-only">Search query</label>
     <input type="text" id="q-top" name="q" value="{{ query }}" required>
+    <select name="ranking" style="padding: 6px 10px; border: 1px solid #ccc; border-radius: 4px; background: #fff; font-size: 13px;">
+        <option value="bm25" {% if ranking == 'bm25' %}selected{% endif %}>BM25</option>
+        <option value="tfidf" {% if ranking == 'tfidf' %}selected{% endif %}>TF-IDF</option>
+        <option value="frequency" {% if ranking == 'frequency' %}selected{% endif %}>Frequency</option>
+    </select>
     <button type="submit">Search</button>
 </form>
 {% endblock %}
@@ -34,13 +39,13 @@
         <div class="results-meta">
             {% if results.did_you_mean %}
                 <div class="fuzzy-box">
-                    <p class="did-you-mean">Did you mean: <a href="/search?q={{ results.did_you_mean }}"><strong>{{ results.did_you_mean }}</strong></a>?</p>
+                    <p class="did-you-mean">Did you mean: <a href="/search?q={{ results.did_you_mean }}&ranking={{ ranking }}"><strong>{{ results.did_you_mean }}</strong></a>?</p>
                     <p class="showing-results">Showing results for: <strong>{{ results.did_you_mean }}</strong> (Original query: <em>{{ query }}</em>)</p>
                 </div>
             {% else %}
                 <h2>Search results for: <em>{{ query }}</em></h2>
             {% endif %}
-            <p>Search type: <strong>{% if results.did_you_mean %}Fuzzy & Typo Tolerant Search{% else %}Boolean Search{% endif %}</strong></p>
+            <p>Search type: <strong>{{ results.query_type|capitalize }} Search</strong> &bull; Ranking Strategy: <strong style="color: #1976d2;">{{ (results.ranking_algorithm or ranking)|upper }}</strong></p>
             <p>Results found: {{ results|length }} <span class="search-time">(Search time: {{ search_time }} seconds)</span></p>
         </div>
         
@@ -50,7 +55,10 @@
                 <h3 class="result-title">{{ result.title }}</h3>
                 <span class="result-filename">{{ result.filename }}</span>
                 <p class="result-snippet">{{ result.snippet | safe }}</p>
-                <span class="result-score">TF-IDF Score: {{ "%.4f"|format(result.score) }}</span>
+                <div style="display: flex; gap: 12px; align-items: center; margin-top: 6px;">
+                    <span class="result-score">{{ (result.ranking_algorithm or ranking)|upper }} Score: {{ "%.4f"|format(result.score) }}</span>
+                    <a href="/api/search/explain?q={{ query }}&doc={{ result.filename }}&ranking={{ ranking }}" target="_blank" style="font-size: 12px; color: #666; text-decoration: underline;">Why this result? (Explain Score)</a>
+                </div>
             </li>
             {% endfor %}
         </ul>

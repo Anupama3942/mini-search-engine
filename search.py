@@ -1,6 +1,6 @@
 """
-Mini Search Engine - Stage 11 (Core Logic & Optimizations)
-Performance, Caching, Precomputation, Incremental Indexing & Scalability.
+Mini Search Engine - Stage 13 (Core Logic & Ranking)
+Probabilistic BM25, Multi-Strategy Ranking, Caching & Performance.
 """
 
 from pathlib import Path
@@ -15,6 +15,7 @@ from typing import Dict, List, Any, Optional, Set, Tuple
 
 import config
 from cache import BoundedLRUCache
+from ranking import get_ranker, BaseRanker, BM25Ranker, TFIDFRanker, FrequencyRanker
 from query_parser import (
     tokenize_query, 
     QueryParser, 
@@ -111,6 +112,7 @@ class SearchResults(list):
         corrections=None,
         timings=None,
         query_type="normal",
+        ranking_algorithm="bm25",
         fuzzy_used=False,
         phrase_used=False,
         boolean_used=False,
@@ -123,6 +125,7 @@ class SearchResults(list):
         self.corrections = corrections or {}
         self.timings = timings or {}
         self.query_type = query_type
+        self.ranking_algorithm = ranking_algorithm
         self.fuzzy_used = fuzzy_used
         self.phrase_used = phrase_used
         self.boolean_used = boolean_used
@@ -155,13 +158,13 @@ class SearchEngine:
         self.inverted_index: Dict[str, Set[str]] = {}
         self.positional_index: Dict[str, Dict[str, List[int]]] = {}
         
-        # Precomputed Document & Term Statistics (Stage 11 Optimization)
+        # Precomputed Document & Term Statistics
         self.doc_lengths: Dict[str, int] = {}
         self.term_counts: Dict[str, Dict[str, int]] = {}
         self.doc_freq: Dict[str, int] = {}
         self.idf_cache: Dict[str, float] = {}
         
-        # Caching & Invalidation Layer (Stage 11 Optimization)
+        # Caching & Invalidation Layer
         self.index_version = 1
         self.query_cache = BoundedLRUCache(maxsize=config.QUERY_CACHE_SIZE, name="query_cache")
         self.fuzzy_cache = BoundedLRUCache(maxsize=config.FUZZY_CACHE_SIZE, name="fuzzy_cache")
@@ -212,12 +215,12 @@ class SearchEngine:
 
         for filename, tokens in self.processed_documents.items():
             for position, token in enumerate(tokens):
-                # Standard Inverted Index (Set for O(1) membership & union)
+                # Standard Inverted Index
                 if token not in self.inverted_index:
                     self.inverted_index[token] = set()
                 self.inverted_index[token].add(filename)
                 
-                # Positional Index: { term: { filename: [pos1, pos2] } }
+                # Positional Index
                 if token not in self.positional_index:
                     self.positional_index[token] = {}
                 if filename not in self.positional_index[token]:
@@ -249,7 +252,7 @@ class SearchEngine:
             "total_postings": total_postings,
             "total_stored_positions": total_stored_positions,
             "avg_postings_per_term": round(total_postings / vocab_size, 2) if vocab_size > 0 else 0.0,
-            "avg_document_length": round(total_tokens / doc_count, 1) if doc_count > 0 else 0.0,
+            "avg_document_length": round(total_tokens / doc_count, 2) if doc_count > 0 else 0.0,
             "largest_document": {"filename": largest_doc[0], "tokens": largest_doc[1]},
             "smallest_document": {"filename": smallest_doc[0], "tokens": smallest_doc[1]},
             "build_time_seconds": round(build_time, 5),
@@ -257,9 +260,9 @@ class SearchEngine:
             "index_version": self.index_version
         }
 
-    # --- Incremental Indexing (Stage 11 Optimization) ---
+    # --- Incremental Indexing ---
     def add_document(self, filename: str, content: str) -> None:
-        """Incrementally add a document and update index structures without rebuilding the entire corpus."""
+        """Incrementally add a document and update index structures."""
         self.documents[filename] = content
         tokens = process_text(content)
         self.processed_documents[filename] = tokens
@@ -281,7 +284,6 @@ class SearchEngine:
                 self.positional_index[token][filename] = []
             self.positional_index[token][filename].append(position)
 
-        # Invalidate caches & recompute IDFs
         self._recompute_stats()
 
     def remove_document(self, filename: str) -> bool:
@@ -339,22 +341,21 @@ class SearchEngine:
             "vocabulary_size": vocab_size,
             "total_tokens": total_tokens,
             "total_postings": total_postings,
+            "avg_document_length": round(total_tokens / doc_count, 2) if doc_count > 0 else 0.0,
             "index_version": self.index_version
         })
 
-    # --- Index Validation (Stage 11 Optimization) ---
+    # --- Index Validation ---
     def validate_index(self) -> Dict[str, Any]:
         """Perform comprehensive integrity validation on index data structures."""
         errors = []
         doc_keys = set(self.documents.keys())
 
-        # Check inverted index postings
         for term, postings in self.inverted_index.items():
             for doc in postings:
                 if doc not in doc_keys:
                     errors.append(f"Inverted index term '{term}' references unknown document '{doc}'.")
 
-        # Check positional index
         for term, doc_dict in self.positional_index.items():
             for doc, positions in doc_dict.items():
                 if doc not in doc_keys:
@@ -364,7 +365,6 @@ class SearchEngine:
                     if pos < 0 or pos >= doc_len:
                         errors.append(f"Invalid position {pos} for doc '{doc}' of length {doc_len}.")
 
-        # Check statistics consistency
         if len(self.doc_lengths) != len(self.documents):
             errors.append("Mismatch between doc_lengths count and documents count.")
 
@@ -378,11 +378,10 @@ class SearchEngine:
             "vocabulary_size": len(self.inverted_index)
         }
 
-    # --- Index Serialization (Stage 11 Optimization) ---
+    # --- Index Serialization ---
     def save_index(self, path: Path = config.INDEX_CACHE_PATH) -> bool:
-        """Safely serialize precomputed index to JSON for instant cold startup."""
+        """Safely serialize precomputed index to JSON."""
         try:
-            # Convert sets to sorted lists for JSON serialization
             serialized_inverted = {k: sorted(list(v)) for k, v in self.inverted_index.items()}
             data = {
                 "version": self.index_version,
@@ -401,7 +400,7 @@ class SearchEngine:
             return False
 
     def load_index(self, path: Path = config.INDEX_CACHE_PATH) -> bool:
-        """Load precomputed index from JSON, bypassing document processing."""
+        """Load precomputed index from JSON."""
         if not path.exists():
             return False
         try:
@@ -415,7 +414,6 @@ class SearchEngine:
             self.idf_cache = data.get("idf_cache", {})
             self.index_stats = data.get("index_stats", {})
             
-            # Convert lists back to sets
             self.inverted_index = {k: set(v) for k, v in data.get("inverted_index", {}).items()}
             self.clear_caches()
             return True
@@ -427,7 +425,7 @@ class SearchEngine:
         """Return the calculated index and collection statistics."""
         return self.index_stats
 
-    # --- Precomputed TF and IDF Lookups (O(1)) ---
+    # --- TF & IDF Lookups ---
     def calculate_tf(self, term: str, filename: str) -> float:
         """O(1) precomputed Term Frequency lookup."""
         doc_len = self.doc_lengths.get(filename, 0)
@@ -448,6 +446,37 @@ class SearchEngine:
         self.idf_cache[term] = val
         return val
 
+    # --- Score Explanation Utility (Stage 13) ---
+    def explain_score(
+        self, 
+        query: str, 
+        filename: str, 
+        ranking_algorithm: str = config.DEFAULT_RANKING_ALGORITHM,
+        k1: Optional[float] = None,
+        b: Optional[float] = None
+    ) -> Dict[str, Any]:
+        """Provide transparent attribution of ranking scores for debugging and learning."""
+        if filename not in self.documents:
+            return {"error": f"Document '{filename}' not found."}
+        
+        try:
+            tokens = tokenize_query(query, process_text)
+            parser = QueryParser(tokens)
+            ast = parser.parse()
+            if not ast:
+                return {"error": "Empty query."}
+            vocabulary = set(self.inverted_index.keys())
+            resolved_ast, _ = resolve_ast(ast, vocabulary, self.fuzzy_cache)
+            positive_terms = list(set(extract_positive_terms(resolved_ast)))
+        except Exception as e:
+            return {"error": str(e)}
+
+        ranker = get_ranker(ranking_algorithm, k1=k1, b=b)
+        explanation = ranker.explain_score(positive_terms, filename, self)
+        explanation["query"] = query
+        explanation["positive_terms"] = positive_terms
+        return explanation
+
     # --- Health Check Endpoint Utility ---
     def health_check(self) -> Dict[str, Any]:
         """Comprehensive search engine health and status check."""
@@ -461,28 +490,34 @@ class SearchEngine:
             "index_valid": validation["is_valid"],
             "index_version": self.index_version,
             "caching_enabled": config.CACHE_ENABLED,
+            "default_ranking": config.DEFAULT_RANKING_ALGORITHM,
+            "bm25_parameters": {"k1": config.BM25_K1, "b": config.BM25_B},
             "query_cache_stats": self.query_cache.get_stats(),
             "fuzzy_cache_stats": self.fuzzy_cache.get_stats(),
             "memory_usage": memory
         }
 
-    # --- Optimized Search Pipeline ---
+    # --- Search Pipeline with Pluggable Ranking (Stage 13) ---
     def search(
         self, 
         query: str, 
         log_analytics: bool = True, 
-        top_k: Optional[int] = config.TOP_K_DEFAULT
+        top_k: Optional[int] = config.TOP_K_DEFAULT,
+        ranking_algorithm: str = config.DEFAULT_RANKING_ALGORITHM,
+        k1: Optional[float] = None,
+        b: Optional[float] = None
     ) -> SearchResults:
         t_start = time.perf_counter()
         
         if not self.documents:
-            res = SearchResults([], original_query=query)
+            res = SearchResults([], original_query=query, ranking_algorithm=ranking_algorithm)
             if log_analytics and config.ANALYTICS_ENABLED:
                 record_search(query, 0, 0.0, query_type="empty")
             return res
 
-        # 1. Check Query Cache (O(1) Bounded LRU Cache)
-        cache_key = (query.strip(), self.index_version)
+        # 1. Check Query Cache
+        algo_key = ranking_algorithm.lower().strip()
+        cache_key = (query.strip(), self.index_version, algo_key, k1, b, top_k)
         if config.CACHE_ENABLED:
             cached_result = self.query_cache.get(cache_key)
             if cached_result is not None:
@@ -493,6 +528,7 @@ class SearchEngine:
                     corrections=cached_result.corrections,
                     timings=dict(cached_result.timings),
                     query_type=cached_result.query_type,
+                    ranking_algorithm=cached_result.ranking_algorithm,
                     fuzzy_used=cached_result.fuzzy_used,
                     phrase_used=cached_result.phrase_used,
                     boolean_used=cached_result.boolean_used,
@@ -512,19 +548,19 @@ class SearchEngine:
                     )
                 return cached_copy
 
-        # 2. Tokenize and Parse the Boolean/Phrase Query
+        # 2. Tokenize and Parse Query
         t_parse_start = time.perf_counter()
         try:
             tokens = tokenize_query(query, process_text)
             if not tokens:
-                res = SearchResults([], original_query=query)
+                res = SearchResults([], original_query=query, ranking_algorithm=algo_key)
                 if log_analytics and config.ANALYTICS_ENABLED:
                     record_search(query, 0, 0.0, query_type="empty")
                 return res
             parser = QueryParser(tokens)
             ast = parser.parse()
             if not ast:
-                res = SearchResults([], original_query=query)
+                res = SearchResults([], original_query=query, ranking_algorithm=algo_key)
                 if log_analytics and config.ANALYTICS_ENABLED:
                     record_search(query, 0, 0.0, query_type="empty")
                 return res
@@ -533,10 +569,10 @@ class SearchEngine:
         t_parse_end = time.perf_counter()
         query_parsing_time = t_parse_end - t_parse_start
 
-        # Detect AST Features (Phrase & Boolean)
+        # Detect AST Features
         has_phrase, has_boolean = detect_ast_features(ast)
 
-        # 3. Fuzzy Term Resolution (with Bounded Cache & Length Filter)
+        # 3. Fuzzy Term Resolution
         t_fuzzy_start = time.perf_counter()
         vocabulary = set(self.inverted_index.keys())
         resolved_ast, corrections = resolve_ast(ast, vocabulary, self.fuzzy_cache)
@@ -552,7 +588,6 @@ class SearchEngine:
                 corrected_query = pattern.sub(corrected, corrected_query)
             did_you_mean = corrected_query
 
-        # Determine Query Type label
         types = []
         if has_boolean:
             types.append("boolean")
@@ -562,34 +597,32 @@ class SearchEngine:
             types.append("fuzzy")
         query_type = " + ".join(types) if types else "normal"
 
-        # 4. Evaluate Expression (Candidate Filtering with Early Termination)
+        # 4. Candidate Retrieval
         t_retrieval_start = time.perf_counter()
         all_docs = set(self.documents.keys())
         matching_docs = evaluate_query(resolved_ast, self.inverted_index, all_docs, self.positional_index)
         t_retrieval_end = time.perf_counter()
         retrieval_time = t_retrieval_end - t_retrieval_start
         
-        # Calculate Candidate Reduction Metric
         total_docs_count = len(self.documents)
         candidate_count = len(matching_docs)
-        if total_docs_count > 0:
-            candidate_reduction = round((1.0 - (candidate_count / total_docs_count)) * 100.0, 2)
-        else:
-            candidate_reduction = 0.0
+        candidate_reduction = round((1.0 - (candidate_count / total_docs_count)) * 100.0, 2) if total_docs_count > 0 else 0.0
 
-        # 5. Extract Positive Terms for TF-IDF Ranking
+        # 5. Extract Positive Terms for Scoring
         t_ranking_start = time.perf_counter()
         positive_terms = list(set(extract_positive_terms(resolved_ast)))
         
-        # 6. Precomputed Scoring for Candidate Documents Only
+        # 6. Apply Pluggable Ranking Strategy (BM25 / TF-IDF / Frequency)
+        try:
+            ranker = get_ranker(algo_key, k1=k1, b=b)
+        except ValueError as e:
+            return {"error": str(e)}
+
+        raw_ranked_items = ranker.rank(positive_terms, matching_docs, self, top_k=top_k)
+        
         results = []
-        for filename in matching_docs:
-            score = 0.0
-            for term in positive_terms:
-                tf = self.calculate_tf(term, filename)
-                idf = self.calculate_idf(term)
-                score += (tf * idf)
-                
+        for item in raw_ranked_items:
+            filename = item["filename"]
             title = filename.replace(".txt", "").capitalize()
             raw_text = self.documents[filename]
             snippet = generate_snippet(raw_text, positive_terms)
@@ -597,25 +630,13 @@ class SearchEngine:
             results.append({
                 "filename": filename,
                 "title": title,
-                "score": score,
-                "snippet": snippet
+                "score": item["score"],
+                "snippet": snippet,
+                "ranking_algorithm": ranker.name
             })
-            
-        # 7. Sort / Top-K Optimization
-        if top_k and len(results) > top_k:
-            # Heap-based Top-K selection (O(n log k))
-            ranked_results = heapq.nsmallest(
-                top_k, 
-                results, 
-                key=lambda x: (-x["score"], x["filename"])
-            )
-        else:
-            # Exact sorting
-            ranked_results = sorted(results, key=lambda x: (-x["score"], x["filename"]))
 
         t_ranking_end = time.perf_counter()
         ranking_time = t_ranking_end - t_ranking_start
-
         total_search_duration = time.perf_counter() - t_start
 
         timings = {
@@ -627,12 +648,13 @@ class SearchEngine:
         }
 
         search_result_obj = SearchResults(
-            ranked_results, 
+            results, 
             original_query=query, 
             did_you_mean=did_you_mean, 
             corrections=corrections,
             timings=timings,
             query_type=query_type,
+            ranking_algorithm=ranker.name,
             fuzzy_used=fuzzy_used,
             phrase_used=has_phrase,
             boolean_used=has_boolean,
@@ -640,15 +662,13 @@ class SearchEngine:
             candidate_reduction_pct=candidate_reduction
         )
 
-        # Save to Bounded Query Cache
         if config.CACHE_ENABLED:
             self.query_cache.set(cache_key, search_result_obj)
 
-        # 8. Record Analytics
         if log_analytics and config.ANALYTICS_ENABLED:
             record_search(
                 query=query,
-                result_count=len(ranked_results),
+                result_count=len(results),
                 search_duration=total_search_duration,
                 query_parsing_time=query_parsing_time,
                 term_resolution_time=term_resolution_time,
@@ -665,28 +685,27 @@ class SearchEngine:
 
 # CLI Interface
 def main():
-    print("=" * 45)
-    print("  MINI SEARCH ENGINE (CLI) Stage 11")
-    print("  High-Performance Search & Index Optimization")
-    print("=" * 45)
+    print("=" * 50)
+    print("  MINI SEARCH ENGINE (CLI) Stage 13")
+    print("  Advanced Ranking with Probabilistic BM25")
+    print("=" * 50)
 
     engine = SearchEngine()
     stats = engine.get_index_statistics()
     print(f"Documents loaded:        {stats['total_documents']}")
-    print(f"Unique vocabulary terms: {stats['vocabulary_size']}")
-    print(f"Index build throughput:  {stats['throughput_docs_per_sec']} docs/sec")
-    print(f"Query Cache & Precomp:   Active")
+    print(f"Average document length: {stats['avg_document_length']} tokens")
+    print(f"Default ranking:         {config.DEFAULT_RANKING_ALGORITHM.upper()} (k1={config.BM25_K1}, b={config.BM25_B})")
 
     while True:
-        query = input("\nEnter search term (or 'exit' to quit): ").strip()
+        query = input("\nEnter search query (or 'exit'): ").strip()
         if query.lower() == 'exit':
             break
         if not query:
             print("\nPlease enter a search term.")
             continue
 
-        print("\nSearching...")
-        results = engine.search(query)
+        print("\nSearching with BM25...")
+        results = engine.search(query, ranking_algorithm="bm25")
         
         if isinstance(results, dict) and "error" in results:
             print(f"Error: {results['error']}")
@@ -694,21 +713,14 @@ def main():
 
         if getattr(results, "did_you_mean", None):
             print(f"\n* Did you mean: {results.did_you_mean}? *")
-            print(f"Showing results for: {results.did_you_mean} (Original: {query})")
             
         cache_status = " [CACHE HIT]" if results.cache_hit else " [CACHE MISS]"
-        print(f"\nResults found: {len(results)} (Latency: {results.timings.get('total_search_duration', 0)*1000:.3f} ms){cache_status}")
-        print(f"Candidate Reduction: {results.candidate_reduction_pct}%")
-        print(f"Timing Breakdown:")
-        print(f"  - Parsing:        {results.timings.get('query_parsing_time', 0)*1000:.3f} ms")
-        print(f"  - Term Lookup:    {results.timings.get('term_resolution_time', 0)*1000:.3f} ms")
-        print(f"  - Retrieval:      {results.timings.get('retrieval_time', 0)*1000:.3f} ms")
-        print(f"  - TF-IDF Ranking: {results.timings.get('ranking_time', 0)*1000:.3f} ms")
-        print("-" * 40)
+        print(f"\nResults found: {len(results)} ({results.timings.get('total_search_duration', 0)*1000:.3f} ms){cache_status}")
+        print(f"Ranking Strategy: {results.ranking_algorithm.upper()}")
+        print("-" * 45)
 
         for i, res in enumerate(results, start=1):
-            print(f"  {i}. {res['filename']}")
-            print(f"     TF-IDF Score: {res['score']:.4f}")
+            print(f"  {i}. {res['filename']}  (BM25 Score: {res['score']:.4f})")
 
 if __name__ == "__main__":
     main()
