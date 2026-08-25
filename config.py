@@ -1,6 +1,6 @@
 """
 Mini Search Engine - Central Configuration
-Stage 13: Advanced Ranking & BM25 Configuration
+Stage 14: Learning-to-Rank (LTR) & Advanced Ranking Configuration
 """
 
 from pathlib import Path
@@ -10,6 +10,9 @@ BASE_DIR = Path(__file__).parent
 DOCUMENTS_DIR = BASE_DIR / "documents"
 ANALYTICS_DB_PATH = BASE_DIR / "analytics.db"
 INDEX_CACHE_PATH = BASE_DIR / "index_cache.json"
+MODELS_DIR = BASE_DIR / "models"
+LTR_MODEL_PATH = MODELS_DIR / "ltr_model.json"
+LTR_METADATA_PATH = MODELS_DIR / "ltr_metadata.json"
 
 # Caching Configuration
 CACHE_ENABLED = True
@@ -18,7 +21,7 @@ FUZZY_CACHE_SIZE = 512
 IDF_CACHE_ENABLED = True
 
 # Search & Ranking Configuration
-DEFAULT_RANKING_ALGORITHM = "bm25"  # Options: "bm25", "tfidf", "frequency"
+DEFAULT_RANKING_ALGORITHM = "bm25"  # Options: "bm25", "tfidf", "frequency", "ltr"
 TOP_K_DEFAULT = 50
 EARLY_TERMINATION_ENABLED = True
 POSTING_LIST_SORTING = True
@@ -33,6 +36,12 @@ def validate_bm25_params(k1: float, b: float) -> None:
         raise ValueError(f"Invalid BM25 parameter k1={k1}. Must be > 0.")
     if not (0.0 <= b <= 1.0):
         raise ValueError(f"Invalid BM25 parameter b={b}. Must be between 0.0 and 1.0.")
+
+# Learning-to-Rank (LTR) Configuration
+FEATURE_VERSION = "1.0"
+LTR_DEFAULT_REGULARIZATION_C = 1.0
+LTR_LEARNING_RATE = 0.1
+LTR_EPOCHS = 1000
 
 # Analytics & Observability
 ANALYTICS_ENABLED = True

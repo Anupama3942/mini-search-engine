@@ -182,6 +182,20 @@ def api_cache():
     })
 
 
+@app.route("/api/ltr/status")
+def api_ltr_status():
+    """JSON API endpoint returning LTR model metadata, feature version, and weights."""
+    import json
+    if config.LTR_METADATA_PATH.exists():
+        try:
+            with open(config.LTR_METADATA_PATH, "r", encoding="utf-8") as f:
+                metadata = json.load(f)
+            return jsonify(metadata)
+        except Exception as e:
+            return jsonify({"status": "error", "message": str(e)}), 500
+    return jsonify({"status": "not_trained", "feature_version": config.FEATURE_VERSION})
+
+
 @app.errorhandler(404)
 def page_not_found(e):
     return render_template("404.html"), 404

@@ -1,0 +1,117 @@
+{
+  "model_type": "Pointwise Logistic Regression",
+  "feature_version": "1.0",
+  "feature_names": [
+    "bm25_score",
+    "tfidf_score",
+    "query_term_coverage",
+    "exact_term_match_count",
+    "term_frequency_sum",
+    "document_length_norm",
+    "query_length",
+    "phrase_match",
+    "title_match",
+    "fuzzy_score"
+  ],
+  "best_regularization_c": 0.01,
+  "feature_weights": {
+    "bm25_score": 0.037371,
+    "tfidf_score": 0.040088,
+    "query_term_coverage": 0.156528,
+    "exact_term_match_count": 0.061576,
+    "term_frequency_sum": 0.055344,
+    "document_length_norm": 0.000207,
+    "query_length": -0.023812,
+    "phrase_match": 0.040729,
+    "title_match": 0.082271,
+    "fuzzy_score": -0.020311
+  },
+  "evaluation_metrics": {
+    "train": {
+      "map": 0.9951,
+      "mrr": 1.0,
+      "ndcg@5": 0.9981,
+      "p@1": 1.0,
+      "p@5": 0.4588
+    },
+    "validation": {
+      "map": 0.3333,
+      "mrr": 0.3333,
+      "ndcg@5": 0.3333,
+      "p@1": 0.3333,
+      "p@5": 0.2667
+    },
+    "test": {
+      "map": 1.0,
+      "mrr": 1.0,
+      "ndcg@5": 1.0,
+      "p@1": 1.0,
+      "p@5": 0.36
+    },
+    "pairwise_test": {
+      "map": 1.0,
+      "mrr": 1.0,
+      "ndcg@5": 1.0,
+      "p@1": 1.0,
+      "p@5": 0.36
+    }
+  },
+  "feature_ablation": [
+    {
+      "feature_set": "BM25 only",
+      "features_used": [
+        "bm25_score"
+      ],
+      "feature_count": 1,
+      "map": 1.0,
+      "mrr": 1.0,
+      "ndcg@5": 1.0,
+      "p@5": 0.36
+    },
+    {
+      "feature_set": "BM25 + TF-IDF",
+      "features_used": [
+        "bm25_score",
+        "tfidf_score"
+      ],
+      "feature_count": 2,
+      "map": 1.0,
+      "mrr": 1.0,
+      "ndcg@5": 1.0,
+      "p@5": 0.36
+    },
+    {
+      "feature_set": "+ Coverage",
+      "features_used": [
+        "bm25_score",
+        "tfidf_score",
+        "query_term_coverage"
+      ],
+      "feature_count": 3,
+      "map": 1.0,
+      "mrr": 1.0,
+      "ndcg@5": 1.0,
+      "p@5": 0.36
+    },
+    {
+      "feature_set": "All Features",
+      "features_used": [
+        "bm25_score",
+        "tfidf_score",
+        "query_term_coverage",
+        "exact_term_match_count",
+        "term_frequency_sum",
+        "document_length_norm",
+        "query_length",
+        "phrase_match",
+        "title_match",
+        "fuzzy_score"
+      ],
+      "feature_count": 10,
+      "map": 1.0,
+      "mrr": 1.0,
+      "ndcg@5": 1.0,
+      "p@5": 0.36
+    }
+  ]
+}

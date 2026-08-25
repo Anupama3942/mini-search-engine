@@ -1,9 +1,10 @@
 """
-Mini Search Engine - Stage 12
-Information Retrieval Evaluation Metrics
+Mini Search Engine - Stage 12 & 14
+Information Retrieval Evaluation Metrics (Precision, Recall, F1, MAP, MRR, NDCG)
 """
 
-from typing import List, Set, Dict, Any, Union
+import math
+from typing import List, Set, Dict, Any, Union, Optional
 
 
 def precision(retrieved: List[str], relevant: Union[List[str], Set[str]]) -> float:
@@ -116,6 +117,79 @@ def mean_reciprocal_rank(rr_list: List[float]) -> float:
     if not rr_list:
         return 0.0
     return round(sum(rr_list) / len(rr_list), 4)
+
+
+# --- Stage 14: Normalized Discounted Cumulative Gain (NDCG) ---
+
+def discounted_cumulative_gain(
+    retrieved: List[str], 
+    relevant: Union[List[str], Set[str]], 
+    k: Optional[int] = None
+) -> float:
+    """
+    Calculate Discounted Cumulative Gain (DCG@K):
+    DCG@K = sum_{i=1}^K rel_i / log2(i + 1)
+    """
+    cutoff = k if k is not None else len(retrieved)
+    top_k = retrieved[:cutoff]
+    relevant_set = set(relevant)
+    
+    dcg = 0.0
+    for rank, doc in enumerate(top_k, start=1):
+        rel = 1.0 if doc in relevant_set else 0.0
+        if rel > 0:
+            dcg += (rel / math.log2(rank + 1))
+            
+    return dcg
+
+
+def ideal_discounted_cumulative_gain(
+    relevant: Union[List[str], Set[str]], 
+    k: Optional[int] = None
+) -> float:
+    """
+    Calculate Ideal Discounted Cumulative Gain (IDCG@K):
+    IDCG@K = sum_{i=1}^{min(K, |Relevant|)} 1.0 / log2(i + 1)
+    """
+    num_rel = len(set(relevant))
+    if num_rel == 0:
+        return 0.0
+    
+    cutoff = min(k, num_rel) if k is not None else num_rel
+    idcg = 0.0
+    for rank in range(1, cutoff + 1):
+        idcg += (1.0 / math.log2(rank + 1))
+        
+    return idcg
+
+
+def ndcg_at_k(
+    retrieved: List[str], 
+    relevant: Union[List[str], Set[str]], 
+    k: int = 5
+) -> float:
+    """
+    Calculate Normalized Discounted Cumulative Gain (NDCG@K):
+    NDCG@K = DCG@K / IDCG@K
+    """
+    relevant_set = set(relevant)
+    if not relevant_set:
+        return 1.0 if not retrieved else 0.0
+        
+    dcg = discounted_cumulative_gain(retrieved, relevant, k=k)
+    idcg = ideal_discounted_cumulative_gain(relevant, k=k)
+    
+    if idcg <= 0.0:
+        return 0.0
+        
+    return round(dcg / idcg, 4)
+
+
+def mean_ndcg_at_k(ndcg_list: List[float]) -> float:
+    """Calculate Mean NDCG across all queries."""
+    if not ndcg_list:
+        return 0.0
+    return round(sum(ndcg_list) / len(ndcg_list), 4)
 
 
 def calculate_confusion_matrix(

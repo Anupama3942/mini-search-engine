@@ -1,6 +1,6 @@
 """
-Mini Search Engine - Stage 13
-Search Quality Evaluator & Relevance Testing Framework
+Mini Search Engine - Stage 13 & 14
+Search Quality Evaluator & Relevance Testing Framework (MAP, MRR, NDCG)
 """
 
 import json
@@ -19,6 +19,8 @@ from .metrics import (
     reciprocal_rank,
     mean_average_precision,
     mean_reciprocal_rank,
+    ndcg_at_k,
+    mean_ndcg_at_k,
     calculate_confusion_matrix
 )
 import config
@@ -116,6 +118,8 @@ class SearchEvaluator:
         p10_scores = []
         r5_scores = []
         r10_scores = []
+        ndcg5_scores = []
+        ndcg10_scores = []
         overall_precisions = []
         overall_recalls = []
 
@@ -152,6 +156,8 @@ class SearchEvaluator:
             r10 = recall_at_k(retrieved_docs, ground_truth, 10)
             ap = average_precision(retrieved_docs, ground_truth)
             rr = reciprocal_rank(retrieved_docs, ground_truth)
+            ndcg5 = ndcg_at_k(retrieved_docs, ground_truth, 5)
+            ndcg10 = ndcg_at_k(retrieved_docs, ground_truth, 10)
             cm = calculate_confusion_matrix(retrieved_docs, ground_truth, all_documents)
 
             # Error Analysis breakdown
@@ -175,6 +181,8 @@ class SearchEvaluator:
                 "p@10": p10,
                 "r@5": r5,
                 "r@10": r10,
+                "ndcg@5": ndcg5,
+                "ndcg@10": ndcg10,
                 "average_precision": ap,
                 "reciprocal_rank": rr,
                 "confusion_matrix": cm,
@@ -192,17 +200,20 @@ class SearchEvaluator:
             p10_scores.append(p10)
             r5_scores.append(r5)
             r10_scores.append(r10)
+            ndcg5_scores.append(ndcg5)
+            ndcg10_scores.append(ndcg10)
             overall_precisions.append(p)
             overall_recalls.append(r)
 
             # Accumulate per-type metrics
             if qtype not in type_metrics:
-                type_metrics[qtype] = {"ap": [], "rr": [], "p1": [], "p5": [], "r5": [], "count": 0}
+                type_metrics[qtype] = {"ap": [], "rr": [], "p1": [], "p5": [], "r5": [], "ndcg5": [], "count": 0}
             type_metrics[qtype]["ap"].append(ap)
             type_metrics[qtype]["rr"].append(rr)
             type_metrics[qtype]["p1"].append(p1)
             type_metrics[qtype]["p5"].append(p5)
             type_metrics[qtype]["r5"].append(r5)
+            type_metrics[qtype]["ndcg5"].append(ndcg5)
             type_metrics[qtype]["count"] += 1
 
         eval_duration = round(time.perf_counter() - t_start, 4)
@@ -219,6 +230,8 @@ class SearchEvaluator:
         mean_r10 = round(sum(r10_scores) / len(r10_scores), 4) if r10_scores else 0.0
         map_score = mean_average_precision(ap_scores)
         mrr_score = mean_reciprocal_rank(rr_scores)
+        mean_ndcg5 = mean_ndcg_at_k(ndcg5_scores)
+        mean_ndcg10 = mean_ndcg_at_k(ndcg10_scores)
 
         # Query Type Summaries
         query_type_summary = {}
@@ -230,6 +243,7 @@ class SearchEvaluator:
                 "p@1": round(sum(m["p1"]) / len(m["p1"]), 4) if m["p1"] else 0.0,
                 "p@5": round(sum(m["p5"]) / len(m["p5"]), 4) if m["p5"] else 0.0,
                 "r@5": round(sum(m["r5"]) / len(m["r5"]), 4) if m["r5"] else 0.0,
+                "ndcg@5": round(sum(m["ndcg5"]) / len(m["ndcg5"]), 4) if m["ndcg5"] else 0.0,
             }
 
         # Identify Best and Worst Queries
@@ -255,15 +269,17 @@ class SearchEvaluator:
                 "r@5": mean_r5,
                 "r@10": mean_r10,
                 "map": map_score,
-                "mrr": mrr_score
+                "mrr": mrr_score,
+                "ndcg@5": mean_ndcg5,
+                "ndcg@10": mean_ndcg10
             },
             "query_type_breakdown": query_type_summary,
             "best_performing_queries": [
-                {"id": q["query_id"], "query": q["query"], "ap": q["average_precision"], "rr": q["reciprocal_rank"]}
+                {"id": q["query_id"], "query": q["query"], "ap": q["average_precision"], "rr": q["reciprocal_rank"], "ndcg@5": q["ndcg@5"]}
                 for q in best_queries
             ],
             "worst_performing_queries": [
-                {"id": q["query_id"], "query": q["query"], "ap": q["average_precision"], "rr": q["reciprocal_rank"], "false_positives": len(q["false_positives"]), "false_negatives": len(q["false_negatives"])}
+                {"id": q["query_id"], "query": q["query"], "ap": q["average_precision"], "rr": q["reciprocal_rank"], "ndcg@5": q["ndcg@5"], "false_positives": len(q["false_positives"]), "false_negatives": len(q["false_negatives"])}
                 for q in worst_queries
             ],
             "per_query_results": per_query_results
@@ -272,18 +288,20 @@ class SearchEvaluator:
         return report
 
     def compare_ranking_methods(self, engine, top_k: int = 10) -> Dict[str, Any]:
-        """Compare all 3 ranking algorithms: BM25, TF-IDF, and Frequency."""
-        bm25_rep = self.evaluate_engine(engine, top_k=top_k, ranking_algorithm="bm25")
-        tfidf_rep = self.evaluate_engine(engine, top_k=top_k, ranking_algorithm="tfidf")
+        """Compare all 4 ranking algorithms: Frequency, TF-IDF, BM25, and LTR."""
         freq_rep = self.evaluate_engine(engine, top_k=top_k, ranking_algorithm="frequency")
+        tfidf_rep = self.evaluate_engine(engine, top_k=top_k, ranking_algorithm="tfidf")
+        bm25_rep = self.evaluate_engine(engine, top_k=top_k, ranking_algorithm="bm25")
+        ltr_rep = self.evaluate_engine(engine, top_k=top_k, ranking_algorithm="ltr")
 
         return {
-            "bm25_ranking": {
-                "map": bm25_rep["summary_metrics"]["map"],
-                "mrr": bm25_rep["summary_metrics"]["mrr"],
-                "p@1": bm25_rep["summary_metrics"]["p@1"],
-                "p@5": bm25_rep["summary_metrics"]["p@5"],
-                "r@5": bm25_rep["summary_metrics"]["r@5"],
+            "frequency_ranking": {
+                "map": freq_rep["summary_metrics"]["map"],
+                "mrr": freq_rep["summary_metrics"]["mrr"],
+                "p@1": freq_rep["summary_metrics"]["p@1"],
+                "p@5": freq_rep["summary_metrics"]["p@5"],
+                "r@5": freq_rep["summary_metrics"]["r@5"],
+                "ndcg@5": freq_rep["summary_metrics"]["ndcg@5"]
             },
             "tfidf_ranking": {
                 "map": tfidf_rep["summary_metrics"]["map"],
@@ -291,13 +309,23 @@ class SearchEvaluator:
                 "p@1": tfidf_rep["summary_metrics"]["p@1"],
                 "p@5": tfidf_rep["summary_metrics"]["p@5"],
                 "r@5": tfidf_rep["summary_metrics"]["r@5"],
+                "ndcg@5": tfidf_rep["summary_metrics"]["ndcg@5"]
             },
-            "frequency_ranking": {
-                "map": freq_rep["summary_metrics"]["map"],
-                "mrr": freq_rep["summary_metrics"]["mrr"],
-                "p@1": freq_rep["summary_metrics"]["p@1"],
-                "p@5": freq_rep["summary_metrics"]["p@5"],
-                "r@5": freq_rep["summary_metrics"]["r@5"],
+            "bm25_ranking": {
+                "map": bm25_rep["summary_metrics"]["map"],
+                "mrr": bm25_rep["summary_metrics"]["mrr"],
+                "p@1": bm25_rep["summary_metrics"]["p@1"],
+                "p@5": bm25_rep["summary_metrics"]["p@5"],
+                "r@5": bm25_rep["summary_metrics"]["r@5"],
+                "ndcg@5": bm25_rep["summary_metrics"]["ndcg@5"]
+            },
+            "ltr_ranking": {
+                "map": ltr_rep["summary_metrics"]["map"],
+                "mrr": ltr_rep["summary_metrics"]["mrr"],
+                "p@1": ltr_rep["summary_metrics"]["p@1"],
+                "p@5": ltr_rep["summary_metrics"]["p@5"],
+                "r@5": ltr_rep["summary_metrics"]["r@5"],
+                "ndcg@5": ltr_rep["summary_metrics"]["ndcg@5"]
             }
         }
 
@@ -373,7 +401,7 @@ class SearchEvaluator:
             fieldnames = [
                 "query_id", "query", "query_type", "relevant_count", "retrieved_count",
                 "precision", "recall", "f1_score", "p@1", "p@3", "p@5", "p@10",
-                "r@5", "r@10", "average_precision", "reciprocal_rank"
+                "r@5", "r@10", "ndcg@5", "ndcg@10", "average_precision", "reciprocal_rank"
             ]
 
             with open(output_path, "w", encoding="utf-8", newline="") as f:
