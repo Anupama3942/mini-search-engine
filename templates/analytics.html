@@ -6,7 +6,7 @@
 <div class="analytics-container">
     <div class="analytics-header">
         <h1>Search Analytics & Performance</h1>
-        <p class="subtitle">Real-time observability, latency benchmarks, and index metrics</p>
+        <p class="subtitle">Real-time observability, latency benchmarks, cache hit-rates, and index metrics</p>
     </div>
 
     <!-- Summary Metrics Cards -->
@@ -75,6 +75,23 @@
         <p class="explanation-note">
             <em>P95 Latency</em> indicates that 95% of searches completed in {{ "%.2f"|format(summary.p95_latency_ms) }} ms or faster.
         </p>
+    </div>
+
+    <!-- Optimization & Cache Performance (Stage 11) -->
+    <div class="dashboard-section">
+        <h2>Performance Optimization & Caching</h2>
+        <div class="two-column-grid">
+            <div class="metric-card sub-card">
+                <span class="metric-label">Query Result Cache</span>
+                <span class="metric-value">{{ query_cache_stats.hit_rate_pct }}% <small>hit rate</small></span>
+                <span class="metric-sub">{{ query_cache_stats.hits }} hits / {{ query_cache_stats.total_requests }} requests (size: {{ query_cache_stats.size }}/{{ query_cache_stats.maxsize }})</span>
+            </div>
+            <div class="metric-card sub-card">
+                <span class="metric-label">Fuzzy Typo Cache</span>
+                <span class="metric-value">{{ fuzzy_cache_stats.hit_rate_pct }}% <small>hit rate</small></span>
+                <span class="metric-sub">{{ fuzzy_cache_stats.hits }} hits / {{ fuzzy_cache_stats.total_requests }} requests (size: {{ fuzzy_cache_stats.size }}/{{ fuzzy_cache_stats.maxsize }})</span>
+            </div>
+        </div>
     </div>
 
     <!-- Query Type Distribution -->
@@ -180,6 +197,7 @@
                 <li><span>Avg Document Length:</span> <strong>{{ index_stats.avg_document_length }} tokens</strong></li>
                 <li><span>Index Build Time:</span> <strong>{{ "%.3f"|format(index_stats.build_time_seconds * 1000) }} ms</strong></li>
                 <li><span>Indexing Throughput:</span> <strong>{{ index_stats.throughput_docs_per_sec }} docs/sec</strong></li>
+                <li><span>Index Version:</span> <strong>v{{ index_stats.index_version }}</strong></li>
             </ul>
         </div>
 
@@ -189,8 +207,8 @@
                 <li><span>Current Heap Allocation:</span> <strong>{{ memory.current_kb }} KB ({{ memory.current_mb }} MB)</strong></li>
                 <li><span>Peak Heap Allocation:</span> <strong>{{ memory.peak_kb }} KB ({{ memory.peak_mb }} MB)</strong></li>
                 <li><span>Memory Profiler:</span> <code>Python tracemalloc</code></li>
-                <li><span>Analytics Storage:</span> <code>SQLite (analytics.db)</code></li>
-                <li><span>API Endpoints:</span> <a href="/api/analytics/summary" target="_blank"><code>/api/analytics/summary</code></a></li>
+                <li><span>Health Endpoint:</span> <a href="/health" target="_blank"><code>/health</code></a></li>
+                <li><span>API Endpoints:</span> <a href="/api/analytics/cache" target="_blank"><code>/api/analytics/cache</code></a></li>
             </ul>
         </div>
     </div>
@@ -227,7 +245,7 @@
     </div>
 
     <div class="dashboard-footer">
-        <p><a href="/">&larr; Return to Search</a> &bull; <a href="/api/analytics/performance" target="_blank">View Performance JSON</a></p>
+        <p><a href="/">&larr; Return to Search</a> &bull; <a href="/health" target="_blank">View Health JSON</a> &bull; <a href="/api/analytics/performance" target="_blank">View Performance JSON</a></p>
     </div>
 </div>
 {% endblock %}

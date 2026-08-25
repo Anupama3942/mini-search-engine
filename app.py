@@ -1,6 +1,6 @@
 """
-Mini Search Engine - Stage 10 (Web Application)
-Flask Web Server with Search Analytics, Performance Dashboard, and API Endpoints.
+Mini Search Engine - Stage 11 (Web Application)
+Flask Web Server with Search Analytics, Performance Dashboard, Health Checks, and API Endpoints.
 """
 
 from flask import Flask, render_template, request, jsonify
@@ -18,7 +18,7 @@ from performance import get_memory_usage
 app = Flask(__name__)
 
 # Initialize search engine in memory when the app starts
-# This loads, indexes, and calculates statistics once!
+# This loads, indexes, precomputes stats, and warms caches
 search_engine = SearchEngine()
 
 
@@ -33,13 +33,13 @@ def index():
 
 @app.route("/search")
 def search():
-    """Search route handling queries, tracking analytics, and displaying ranked results."""
+    """Search route handling queries, caching results, tracking analytics, and displaying ranked results."""
     query = request.args.get("q", "").strip()
     
     if not query:
         return render_template("results.html", error="Please enter a search term.", query="")
 
-    # Execute search with performance tracking & analytics logging
+    # Execute search with caching & analytics logging
     results = search_engine.search(query, log_analytics=True)
     
     # Handle parsing errors from Boolean/Phrase syntax
@@ -66,6 +66,8 @@ def analytics_dashboard():
     recent = get_recent_searches(limit=15)
     index_stats = search_engine.get_index_statistics()
     memory_stats = get_memory_usage()
+    query_cache_stats = search_engine.query_cache.get_stats()
+    fuzzy_cache_stats = search_engine.fuzzy_cache.get_stats()
 
     return render_template(
         "analytics.html",
@@ -75,8 +77,16 @@ def analytics_dashboard():
         type_dist=type_dist,
         recent=recent,
         index_stats=index_stats,
-        memory=memory_stats
+        memory=memory_stats,
+        query_cache_stats=query_cache_stats,
+        fuzzy_cache_stats=fuzzy_cache_stats
     )
+
+
+@app.route("/health")
+def health():
+    """System health, index consistency, and status endpoint."""
+    return jsonify(search_engine.health_check())
 
 
 # --- REST API Endpoints for Observability ---
@@ -108,7 +118,9 @@ def api_performance():
             "min": summary["min_latency_ms"],
             "max": summary["max_latency_ms"]
         },
-        "memory_allocation": memory
+        "memory_allocation": memory,
+        "query_cache": search_engine.query_cache.get_stats(),
+        "fuzzy_cache": search_engine.fuzzy_cache.get_stats()
     })
 
 
@@ -116,6 +128,15 @@ def api_performance():
 def api_index():
     """JSON API endpoint returning index structural statistics."""
     return jsonify(search_engine.get_index_statistics())
+
+
+@app.route("/api/analytics/cache")
+def api_cache():
+    """JSON API endpoint returning cache hit-rate metrics."""
+    return jsonify({
+        "query_cache": search_engine.query_cache.get_stats(),
+        "fuzzy_cache": search_engine.fuzzy_cache.get_stats()
+    })
 
 
 @app.errorhandler(404)

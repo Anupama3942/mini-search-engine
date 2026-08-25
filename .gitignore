@@ -15,8 +15,9 @@ env/
 *.swo
 *~
 
-# Databases
+# Databases and cache
 *.db
+index_cache.json
 
 # OS files
 .DS_Store

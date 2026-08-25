@@ -1,3 +1,8 @@
+"""
+Mini Search Engine - Query Parser & AST Evaluator
+Stage 11: Optimized Evaluation with Early Termination & Candidate Pruning
+"""
+
 import re
 from fuzzy_search import resolve_term
 
@@ -44,7 +49,6 @@ def tokenize_query(query, process_text_func):
         raise ValueError("Invalid phrase query. Please close the quotation marks.")
 
     tokens = []
-    # Match quoted strings, parentheses, or general words
     pattern = r'("[^"]*")|(\()|(\))|([^\s()]+)'
     
     for match in re.finditer(pattern, query):
@@ -71,7 +75,6 @@ def tokenize_query(query, process_text_func):
             if word.upper() in ('AND', 'OR', 'NOT'):
                 tokens.append(word.upper())
             else:
-                # Process the normal terms using the Stage 3 text pipeline
                 processed = process_text_func(word)
                 for pt in processed:
                     tokens.append(pt)
@@ -145,9 +148,8 @@ class QueryParser:
 
 def resolve_ast(node, vocabulary, cache=None):
     """
-    Traverse the AST and resolve any unknown TermNodes using fuzzy matching.
-    Phrase contents remain exact as specified in Stage 9 design.
-    Returns: (resolved_ast, corrections_dict)
+    Traverse the AST and resolve unknown TermNodes using fuzzy matching.
+    Phrase contents remain exact.
     """
     if isinstance(node, TermNode):
         resolved, is_fuzzy, _ = resolve_term(node.term, vocabulary, cache)
@@ -176,27 +178,33 @@ def resolve_ast(node, vocabulary, cache=None):
 
 def evaluate_phrase(phrase_terms, positional_index):
     """
-    Evaluates a phrase using the positional index.
-    A document matches if all terms exist consecutively in the correct order.
+    Optimized phrase evaluation:
+      1. Intersect document candidate sets first (smallest set first).
+      2. Early exit if intersection is empty.
+      3. Positional adjacency check only on qualified candidates.
     """
     if not phrase_terms:
         return set()
         
+    # Check if all terms exist in index
+    for t in phrase_terms:
+        if t not in positional_index:
+            return set()
+
     first_term = phrase_terms[0]
-    if first_term not in positional_index:
-        return set()
-        
     candidate_docs = set(positional_index[first_term].keys())
     
-    # Fast filtering: only keep docs that contain all terms
+    # Intersect with all other terms
     for term in phrase_terms[1:]:
-        if term not in positional_index:
-            return set()
+        if not candidate_docs:
+            return set() # Early exit
         candidate_docs &= set(positional_index[term].keys())
         
+    if not candidate_docs:
+        return set()
+
     matching_docs = set()
     for doc in candidate_docs:
-        # Check positions
         valid_doc = False
         first_term_positions = positional_index[first_term][doc]
         
@@ -209,7 +217,7 @@ def evaluate_phrase(phrase_terms, positional_index):
                     
             if valid_sequence:
                 valid_doc = True
-                break # Sequence found, no need to check other positions
+                break
                 
         if valid_doc:
             matching_docs.add(doc)
@@ -218,7 +226,7 @@ def evaluate_phrase(phrase_terms, positional_index):
 
 def evaluate_query(node, inverted_index, all_documents, positional_index):
     """
-    Recursively evaluates the AST and returns a set of matching documents.
+    Recursively evaluate the AST with early-termination on empty intersections.
     """
     if isinstance(node, TermNode):
         return set(inverted_index.get(node.term, set()))
@@ -228,6 +236,9 @@ def evaluate_query(node, inverted_index, all_documents, positional_index):
     
     elif isinstance(node, AndNode):
         left_result = evaluate_query(node.left, inverted_index, all_documents, positional_index)
+        # Early termination optimization
+        if not left_result:
+            return set()
         right_result = evaluate_query(node.right, inverted_index, all_documents, positional_index)
         return left_result & right_result
         
@@ -244,8 +255,7 @@ def evaluate_query(node, inverted_index, all_documents, positional_index):
 
 def extract_positive_terms(node):
     """
-    Extracts all query terms (including those inside phrases) that are NOT part of a NOT expression.
-    These are the terms that should contribute to the TF-IDF score.
+    Extracts all query terms that are NOT part of a NOT expression.
     """
     if isinstance(node, TermNode):
         return [node.term]

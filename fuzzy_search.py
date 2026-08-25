@@ -1,6 +1,6 @@
 """
-Mini Search Engine - Stage 9
-Fuzzy Search & Typo Tolerance using Levenshtein Distance (Dynamic Programming)
+Mini Search Engine - Stage 11
+Fuzzy Search & Typo Tolerance using Levenshtein Distance & Optimization
 """
 
 def levenshtein_distance(a: str, b: str) -> int:
@@ -17,15 +17,12 @@ def levenshtein_distance(a: str, b: str) -> int:
     m, n = len(a), len(b)
 
     # Initialize (m + 1) x (n + 1) DP table
-    # dp[i][j] represents the edit distance between a[:i] and b[:j]
     dp = [[0] * (n + 1) for _ in range(m + 1)]
 
     # Base cases:
-    # Transforming a[:i] to empty string b[:0] requires i deletions
     for i in range(m + 1):
         dp[i][0] = i
 
-    # Transforming empty string a[:0] to b[:j] requires j insertions
     for j in range(n + 1):
         dp[0][j] = j
 
@@ -33,10 +30,8 @@ def levenshtein_distance(a: str, b: str) -> int:
     for i in range(1, m + 1):
         for j in range(1, n + 1):
             if a[i - 1] == b[j - 1]:
-                # Characters match, no new operation needed
                 dp[i][j] = dp[i - 1][j - 1]
             else:
-                # Minimum of deletion, insertion, or substitution + 1
                 dp[i][j] = 1 + min(
                     dp[i - 1][j],      # deletion from a
                     dp[i][j - 1],      # insertion into a
@@ -56,7 +51,6 @@ def levenshtein_distance_optimized(a: str, b: str) -> int:
     if len(a) < len(b):
         a, b = b, a
 
-    # len(a) >= len(b)
     m, n = len(a), len(b)
     previous_row = list(range(n + 1))
     current_row = [0] * (n + 1)
@@ -96,10 +90,9 @@ def max_edit_distance(term: str) -> int:
 def find_fuzzy_matches(term: str, vocabulary, max_distance: int = None):
     """
     Find matching candidate terms from the vocabulary within the edit distance threshold.
-    Returns a list of dicts: [{"term": candidate, "distance": dist}, ...]
-    Sorted by:
-      1. Distance ascending
-      2. Alphabetical order as deterministic tie-breaker
+    Optimizations:
+      1. Length difference pre-filter: skips candidates with |len(cand) - len(term)| > max_dist
+      2. Deterministic sorting: by distance ascending, then term
     """
     normalized_term = term.lower()
     if max_distance is None:
@@ -111,11 +104,12 @@ def find_fuzzy_matches(term: str, vocabulary, max_distance: int = None):
         return []
 
     candidates = []
+    term_len = len(normalized_term)
     for candidate in vocabulary:
         cand_lower = candidate.lower()
         
-        # Optimization: Length filter (if length difference > max_dist, impossible to match)
-        if abs(len(cand_lower) - len(normalized_term)) > max_dist:
+        # Optimization: Length filter (skips impossible comparisons immediately)
+        if abs(len(cand_lower) - term_len) > max_dist:
             continue
 
         dist = levenshtein_distance(normalized_term, cand_lower)
@@ -125,16 +119,16 @@ def find_fuzzy_matches(term: str, vocabulary, max_distance: int = None):
                 "distance": dist
             })
 
-    # Sort candidates by distance, then term
     candidates.sort(key=lambda x: (x["distance"], x["term"]))
     return candidates
 
 
-def resolve_term(term: str, vocabulary, cache: dict = None):
+def resolve_term(term: str, vocabulary, cache = None):
     """
     Resolve a single term:
-      - If exact match exists in vocabulary -> return (term, False, 0)
-      - Else search for fuzzy matches -> return (best_candidate, True, dist) or (term, False, 0)
+      - 1. Exact match check (O(1))
+      - 2. Bounded Cache lookup (O(1))
+      - 3. Levenshtein Candidate Search (with length pre-filtering)
     """
     normalized = term.lower()
     
@@ -143,8 +137,13 @@ def resolve_term(term: str, vocabulary, cache: dict = None):
         return normalized, False, 0
 
     # 2. Check Cache
-    if cache is not None and normalized in cache:
-        return cache[normalized]
+    if cache is not None:
+        if hasattr(cache, "get"):
+            cached = cache.get(normalized)
+        else:
+            cached = cache.get(normalized) if isinstance(cache, dict) else None
+        if cached is not None:
+            return cached
 
     # 3. Fuzzy Lookup
     matches = find_fuzzy_matches(normalized, vocabulary)
@@ -155,7 +154,11 @@ def resolve_term(term: str, vocabulary, cache: dict = None):
     else:
         result = (normalized, False, 0)
 
+    # 4. Save to Cache
     if cache is not None:
-        cache[normalized] = result
+        if hasattr(cache, "set"):
+            cache.set(normalized, result)
+        elif isinstance(cache, dict):
+            cache[normalized] = result
 
     return result
