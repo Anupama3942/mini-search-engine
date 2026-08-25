@@ -15,16 +15,16 @@
   ],
   "best_regularization_c": 0.01,
   "feature_weights": {
-    "bm25_score": 0.037371,
-    "tfidf_score": 0.040088,
-    "query_term_coverage": 0.156528,
-    "exact_term_match_count": 0.061576,
-    "term_frequency_sum": 0.055344,
-    "document_length_norm": 0.000207,
-    "query_length": -0.023812,
-    "phrase_match": 0.040729,
-    "title_match": 0.082271,
-    "fuzzy_score": -0.020311
+    "bm25_score": 0.037416,
+    "tfidf_score": 0.040092,
+    "query_term_coverage": 0.156677,
+    "exact_term_match_count": 0.061662,
+    "term_frequency_sum": 0.055357,
+    "document_length_norm": 0.000254,
+    "query_length": -0.023798,
+    "phrase_match": 0.029033,
+    "title_match": 0.08227,
+    "fuzzy_score": -0.020253
   },
   "evaluation_metrics": {
     "train": {
