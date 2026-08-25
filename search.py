@@ -505,7 +505,8 @@ class SearchEngine:
         top_k: Optional[int] = config.TOP_K_DEFAULT,
         ranking_algorithm: str = config.DEFAULT_RANKING_ALGORITHM,
         k1: Optional[float] = None,
-        b: Optional[float] = None
+        b: Optional[float] = None,
+        alpha: Optional[float] = None
     ) -> SearchResults:
         t_start = time.perf_counter()
         
@@ -517,7 +518,7 @@ class SearchEngine:
 
         # 1. Check Query Cache
         algo_key = ranking_algorithm.lower().strip()
-        cache_key = (query.strip(), self.index_version, algo_key, k1, b, top_k)
+        cache_key = (query.strip(), self.index_version, algo_key, k1, b, alpha, top_k)
         if config.CACHE_ENABLED:
             cached_result = self.query_cache.get(cache_key)
             if cached_result is not None:
@@ -612,9 +613,9 @@ class SearchEngine:
         t_ranking_start = time.perf_counter()
         positive_terms = list(set(extract_positive_terms(resolved_ast)))
         
-        # 6. Apply Pluggable Ranking Strategy (BM25 / TF-IDF / Frequency)
+        # 6. Apply Pluggable Ranking Strategy (BM25 / TF-IDF / Frequency / LTR / Semantic / Hybrid)
         try:
-            ranker = get_ranker(algo_key, k1=k1, b=b)
+            ranker = get_ranker(algo_key, k1=k1, b=b, alpha=alpha)
         except ValueError as e:
             return {"error": str(e)}
 

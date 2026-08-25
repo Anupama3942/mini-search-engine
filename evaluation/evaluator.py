@@ -103,7 +103,8 @@ class SearchEvaluator:
         top_k: int = 10,
         ranking_algorithm: str = config.DEFAULT_RANKING_ALGORITHM,
         k1: Optional[float] = None,
-        b: Optional[float] = None
+        b: Optional[float] = None,
+        alpha: Optional[float] = None
     ) -> Dict[str, Any]:
         """Run all evaluation queries and compute overall and per-query IR metrics."""
         queries = self.dataset.get("queries", [])
@@ -140,7 +141,8 @@ class SearchEvaluator:
                 top_k=top_k,
                 ranking_algorithm=ranking_algorithm,
                 k1=k1,
-                b=b
+                b=b,
+                alpha=alpha
             )
             retrieved_docs = [r["filename"] for r in search_results] if not isinstance(search_results, dict) else []
 
@@ -288,11 +290,13 @@ class SearchEvaluator:
         return report
 
     def compare_ranking_methods(self, engine, top_k: int = 10) -> Dict[str, Any]:
-        """Compare all 4 ranking algorithms: Frequency, TF-IDF, BM25, and LTR."""
+        """Compare all 6 ranking algorithms: Frequency, TF-IDF, BM25, LTR, Semantic, and Hybrid."""
         freq_rep = self.evaluate_engine(engine, top_k=top_k, ranking_algorithm="frequency")
         tfidf_rep = self.evaluate_engine(engine, top_k=top_k, ranking_algorithm="tfidf")
         bm25_rep = self.evaluate_engine(engine, top_k=top_k, ranking_algorithm="bm25")
         ltr_rep = self.evaluate_engine(engine, top_k=top_k, ranking_algorithm="ltr")
+        sem_rep = self.evaluate_engine(engine, top_k=top_k, ranking_algorithm="semantic")
+        hyb_rep = self.evaluate_engine(engine, top_k=top_k, ranking_algorithm="hybrid")
 
         return {
             "frequency_ranking": {
@@ -326,6 +330,22 @@ class SearchEvaluator:
                 "p@5": ltr_rep["summary_metrics"]["p@5"],
                 "r@5": ltr_rep["summary_metrics"]["r@5"],
                 "ndcg@5": ltr_rep["summary_metrics"]["ndcg@5"]
+            },
+            "semantic_ranking": {
+                "map": sem_rep["summary_metrics"]["map"],
+                "mrr": sem_rep["summary_metrics"]["mrr"],
+                "p@1": sem_rep["summary_metrics"]["p@1"],
+                "p@5": sem_rep["summary_metrics"]["p@5"],
+                "r@5": sem_rep["summary_metrics"]["r@5"],
+                "ndcg@5": sem_rep["summary_metrics"]["ndcg@5"]
+            },
+            "hybrid_ranking": {
+                "map": hyb_rep["summary_metrics"]["map"],
+                "mrr": hyb_rep["summary_metrics"]["mrr"],
+                "p@1": hyb_rep["summary_metrics"]["p@1"],
+                "p@5": hyb_rep["summary_metrics"]["p@5"],
+                "r@5": hyb_rep["summary_metrics"]["r@5"],
+                "ndcg@5": hyb_rep["summary_metrics"]["ndcg@5"]
             }
         }
 

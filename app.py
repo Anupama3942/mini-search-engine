@@ -196,6 +196,20 @@ def api_ltr_status():
     return jsonify({"status": "not_trained", "feature_version": config.FEATURE_VERSION})
 
 
+@app.route("/api/vector/status")
+def api_vector_status():
+    """JSON API endpoint returning vector index metadata and status."""
+    import json
+    if config.VECTOR_METADATA_PATH.exists():
+        try:
+            with open(config.VECTOR_METADATA_PATH, "r", encoding="utf-8") as f:
+                metadata = json.load(f)
+            return jsonify(metadata)
+        except Exception as e:
+            return jsonify({"status": "error", "message": str(e)}), 500
+    return jsonify({"status": "not_built", "embedding_model": config.EMBEDDING_MODEL_NAME})
+
+
 @app.errorhandler(404)
 def page_not_found(e):
     return render_template("404.html"), 404

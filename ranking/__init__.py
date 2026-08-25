@@ -1,5 +1,5 @@
 """
-Mini Search Engine - Stage 13 & 14 Ranking Package
+Mini Search Engine - Stage 13, 14 & 15 Ranking Package
 """
 
 from typing import Optional
@@ -8,17 +8,20 @@ from .frequency import FrequencyRanker
 from .tfidf import TFIDFRanker
 from .bm25 import BM25Ranker
 from .ltr import LTRRanker
+from .semantic import SemanticRanker
+from .hybrid import HybridRanker
 import config
 
 
 def get_ranker(
     algorithm: Optional[str] = None, 
     k1: Optional[float] = None, 
-    b: Optional[float] = None
+    b: Optional[float] = None,
+    alpha: Optional[float] = None
 ) -> BaseRanker:
     """
     Factory function to instantiate ranking strategies.
-    Supported algorithms: "bm25", "tfidf", "frequency", "ltr".
+    Supported algorithms: "bm25", "tfidf", "frequency", "ltr", "semantic", "hybrid".
     """
     algo_name = (algorithm or config.DEFAULT_RANKING_ALGORITHM).lower().strip()
     
@@ -32,8 +35,22 @@ def get_ranker(
         return FrequencyRanker()
     elif algo_name in ("ltr", "learning-to-rank", "learning_to_rank"):
         return LTRRanker()
+    elif algo_name in ("semantic", "vector", "dense"):
+        return SemanticRanker()
+    elif algo_name in ("hybrid", "dense_sparse"):
+        param_alpha = alpha if alpha is not None else config.HYBRID_ALPHA
+        return HybridRanker(alpha=param_alpha)
     else:
-        raise ValueError(f"Unknown ranking algorithm '{algo_name}'. Choose from: 'bm25', 'tfidf', 'frequency', 'ltr'.")
+        raise ValueError(f"Unknown ranking algorithm '{algo_name}'. Choose from: 'bm25', 'tfidf', 'frequency', 'ltr', 'semantic', 'hybrid'.")
 
 
-__all__ = ["BaseRanker", "FrequencyRanker", "TFIDFRanker", "BM25Ranker", "LTRRanker", "get_ranker"]
+__all__ = [
+    "BaseRanker", 
+    "FrequencyRanker", 
+    "TFIDFRanker", 
+    "BM25Ranker", 
+    "LTRRanker", 
+    "SemanticRanker", 
+    "HybridRanker", 
+    "get_ranker"
+]
