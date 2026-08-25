@@ -1,0 +1,233 @@
+{% extends "base.html" %}
+
+{% block title %}Search Analytics & Performance Monitoring{% endblock %}
+
+{% block content %}
+<div class="analytics-container">
+    <div class="analytics-header">
+        <h1>Search Analytics & Performance</h1>
+        <p class="subtitle">Real-time observability, latency benchmarks, and index metrics</p>
+    </div>
+
+    <!-- Summary Metrics Cards -->
+    <div class="metrics-grid">
+        <div class="metric-card">
+            <span class="metric-label">Total Searches</span>
+            <span class="metric-value">{{ summary.total_searches }}</span>
+            <span class="metric-sub">Total time: {{ summary.total_search_time_s }}s</span>
+        </div>
+        <div class="metric-card">
+            <span class="metric-label">Avg Search Latency</span>
+            <span class="metric-value">{{ "%.2f"|format(summary.avg_latency_ms) }} <small>ms</small></span>
+            <span class="metric-sub">Median: {{ "%.2f"|format(summary.median_latency_ms) }} ms</span>
+        </div>
+        <div class="metric-card {% if summary.zero_result_rate > 20 %}metric-warning{% endif %}">
+            <span class="metric-label">Zero-Result Rate</span>
+            <span class="metric-value">{{ summary.zero_result_rate }}%</span>
+            <span class="metric-sub">{{ summary.zero_result_count }} searches yielded 0 docs</span>
+        </div>
+        <div class="metric-card">
+            <span class="metric-label">Fuzzy Search Usage</span>
+            <span class="metric-value">{{ summary.fuzzy_usage_rate }}%</span>
+            <span class="metric-sub">{{ summary.fuzzy_usage_count }} typos resolved</span>
+        </div>
+        <div class="metric-card">
+            <span class="metric-label">Phrase Search Usage</span>
+            <span class="metric-value">{{ summary.phrase_usage_rate }}%</span>
+            <span class="metric-sub">{{ summary.phrase_usage_count }} positional phrase queries</span>
+        </div>
+        <div class="metric-card">
+            <span class="metric-label">Boolean Search Usage</span>
+            <span class="metric-value">{{ summary.boolean_usage_rate }}%</span>
+            <span class="metric-sub">{{ summary.boolean_usage_count }} logical queries</span>
+        </div>
+    </div>
+
+    <!-- Performance & Latency Percentiles -->
+    <div class="dashboard-section">
+        <h2>Latency & Performance Profile</h2>
+        <div class="metrics-grid percentiles-grid">
+            <div class="metric-card sub-card">
+                <span class="metric-label">Min Latency</span>
+                <span class="metric-value">{{ "%.2f"|format(summary.min_latency_ms) }} <small>ms</small></span>
+            </div>
+            <div class="metric-card sub-card">
+                <span class="metric-label">Median (P50)</span>
+                <span class="metric-value">{{ "%.2f"|format(summary.median_latency_ms) }} <small>ms</small></span>
+            </div>
+            <div class="metric-card sub-card">
+                <span class="metric-label">Average</span>
+                <span class="metric-value">{{ "%.2f"|format(summary.avg_latency_ms) }} <small>ms</small></span>
+            </div>
+            <div class="metric-card sub-card">
+                <span class="metric-label">95th Percentile (P95)</span>
+                <span class="metric-value">{{ "%.2f"|format(summary.p95_latency_ms) }} <small>ms</small></span>
+            </div>
+            <div class="metric-card sub-card">
+                <span class="metric-label">99th Percentile (P99)</span>
+                <span class="metric-value">{{ "%.2f"|format(summary.p99_latency_ms) }} <small>ms</small></span>
+            </div>
+            <div class="metric-card sub-card">
+                <span class="metric-label">Max Latency</span>
+                <span class="metric-value">{{ "%.2f"|format(summary.max_latency_ms) }} <small>ms</small></span>
+            </div>
+        </div>
+        <p class="explanation-note">
+            <em>P95 Latency</em> indicates that 95% of searches completed in {{ "%.2f"|format(summary.p95_latency_ms) }} ms or faster.
+        </p>
+    </div>
+
+    <!-- Query Type Distribution -->
+    <div class="dashboard-section">
+        <h2>Query Type Breakdown</h2>
+        <div class="distribution-bars">
+            <div class="dist-row">
+                <span class="dist-label">Normal Keyword Searches ({{ type_dist.normal.count }})</span>
+                <div class="progress-bar-bg">
+                    <div class="progress-bar-fill fill-normal" style="width: {{ type_dist.normal.rate }}%;"></div>
+                </div>
+                <span class="dist-pct">{{ type_dist.normal.rate }}%</span>
+            </div>
+            <div class="dist-row">
+                <span class="dist-label">Boolean Searches ({{ type_dist.boolean.count }})</span>
+                <div class="progress-bar-bg">
+                    <div class="progress-bar-fill fill-boolean" style="width: {{ type_dist.boolean.rate }}%;"></div>
+                </div>
+                <span class="dist-pct">{{ type_dist.boolean.rate }}%</span>
+            </div>
+            <div class="dist-row">
+                <span class="dist-label">Phrase Searches ({{ type_dist.phrase.count }})</span>
+                <div class="progress-bar-bg">
+                    <div class="progress-bar-fill fill-phrase" style="width: {{ type_dist.phrase.rate }}%;"></div>
+                </div>
+                <span class="dist-pct">{{ type_dist.phrase.rate }}%</span>
+            </div>
+            <div class="dist-row">
+                <span class="dist-label">Fuzzy Typo Searches ({{ type_dist.fuzzy.count }})</span>
+                <div class="progress-bar-bg">
+                    <div class="progress-bar-fill fill-fuzzy" style="width: {{ type_dist.fuzzy.rate }}%;"></div>
+                </div>
+                <span class="dist-pct">{{ type_dist.fuzzy.rate }}%</span>
+            </div>
+        </div>
+    </div>
+
+    <!-- Tables Row: Top Queries & Zero-Result Queries -->
+    <div class="two-column-grid">
+        <div class="dashboard-section">
+            <h2>Popular Queries</h2>
+            {% if top_queries %}
+            <table class="analytics-table">
+                <thead>
+                    <tr>
+                        <th>Query</th>
+                        <th>Searches</th>
+                        <th>Avg Results</th>
+                        <th>Avg Latency</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for item in top_queries %}
+                    <tr>
+                        <td><code>{{ item.query }}</code></td>
+                        <td><strong>{{ item.count }}</strong></td>
+                        <td>{{ item.avg_results }}</td>
+                        <td>{{ item.avg_latency_ms }} ms</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+            {% else %}
+            <p class="empty-state">No search queries recorded yet.</p>
+            {% endif %}
+        </div>
+
+        <div class="dashboard-section">
+            <h2>Zero-Result Queries</h2>
+            {% if zero_queries %}
+            <table class="analytics-table">
+                <thead>
+                    <tr>
+                        <th>Unmatched Query</th>
+                        <th>Occurrences</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for item in zero_queries %}
+                    <tr>
+                        <td><code>{{ item.query }}</code></td>
+                        <td><span class="badge-zero">{{ item.count }}</span></td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+            {% else %}
+            <p class="empty-state">Great! No zero-result queries recorded.</p>
+            {% endif %}
+        </div>
+    </div>
+
+    <!-- Index Statistics & Memory Consumption -->
+    <div class="two-column-grid">
+        <div class="dashboard-section">
+            <h2>Index Structure & Construction</h2>
+            <ul class="stats-list">
+                <li><span>Total Documents:</span> <strong>{{ index_stats.total_documents }}</strong></li>
+                <li><span>Vocabulary Size:</span> <strong>{{ index_stats.vocabulary_size }} unique terms</strong></li>
+                <li><span>Total Indexed Tokens:</span> <strong>{{ index_stats.total_tokens }}</strong></li>
+                <li><span>Total Inverted Postings:</span> <strong>{{ index_stats.total_postings }}</strong></li>
+                <li><span>Total Positional Postings:</span> <strong>{{ index_stats.total_stored_positions }}</strong></li>
+                <li><span>Avg Document Length:</span> <strong>{{ index_stats.avg_document_length }} tokens</strong></li>
+                <li><span>Index Build Time:</span> <strong>{{ "%.3f"|format(index_stats.build_time_seconds * 1000) }} ms</strong></li>
+                <li><span>Indexing Throughput:</span> <strong>{{ index_stats.throughput_docs_per_sec }} docs/sec</strong></li>
+            </ul>
+        </div>
+
+        <div class="dashboard-section">
+            <h2>System & Memory Footprint</h2>
+            <ul class="stats-list">
+                <li><span>Current Heap Allocation:</span> <strong>{{ memory.current_kb }} KB ({{ memory.current_mb }} MB)</strong></li>
+                <li><span>Peak Heap Allocation:</span> <strong>{{ memory.peak_kb }} KB ({{ memory.peak_mb }} MB)</strong></li>
+                <li><span>Memory Profiler:</span> <code>Python tracemalloc</code></li>
+                <li><span>Analytics Storage:</span> <code>SQLite (analytics.db)</code></li>
+                <li><span>API Endpoints:</span> <a href="/api/analytics/summary" target="_blank"><code>/api/analytics/summary</code></a></li>
+            </ul>
+        </div>
+    </div>
+
+    <!-- Recent Search Activity Table -->
+    <div class="dashboard-section">
+        <h2>Recent Search Activity</h2>
+        {% if recent %}
+        <table class="analytics-table">
+            <thead>
+                <tr>
+                    <th>Timestamp (UTC)</th>
+                    <th>Query</th>
+                    <th>Results</th>
+                    <th>Latency</th>
+                    <th>Type</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for item in recent %}
+                <tr>
+                    <td><small>{{ item.timestamp }}</small></td>
+                    <td><code>{{ item.query }}</code></td>
+                    <td>{{ item.result_count }}</td>
+                    <td>{{ item.latency_ms }} ms</td>
+                    <td><span class="query-badge badge-{{ item.query_type|replace(' + ', '-') }}">{{ item.query_type }}</span></td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+        {% else %}
+        <p class="empty-state">No recent searches logged.</p>
+        {% endif %}
+    </div>
+
+    <div class="dashboard-footer">
+        <p><a href="/">&larr; Return to Search</a> &bull; <a href="/api/analytics/performance" target="_blank">View Performance JSON</a></p>
+    </div>
+</div>
+{% endblock %}

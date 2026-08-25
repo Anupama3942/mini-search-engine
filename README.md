@@ -11,9 +11,12 @@ Built as a learning project to understand Python fundamentals, Information Retri
 - Positional Index for exact phrase matching (`"exact phrase"`)
 - Text processing pipeline (Stop-word removal, Normalization, Tokenization)
 - Boolean Search (`AND`, `OR`, `NOT`, `( )`)
-- **Fuzzy Search & Typo Tolerance (Levenshtein Distance via Dynamic Programming)**
+- Fuzzy Search & Typo Tolerance (Levenshtein Distance via Dynamic Programming)
 - Search Ranking (TF-IDF)
 - Web Interface (Flask & HTML/CSS)
+- **Search Analytics & Performance Monitoring (SQLite Event Logging & Dashboard)**
+- **Automated Latency Benchmarks & Percentile Profiling (P50, P95, P99)**
+- **System Memory Allocation Tracking (`tracemalloc`)**
 - Snippet generation and query term highlighting
 - Graceful error handling and XSS protection
 
@@ -22,75 +25,93 @@ Built as a learning project to understand Python fundamentals, Information Retri
 - Python 3
 - Flask (Web Framework)
 - Jinja2 (Templating)
+- SQLite3 (Analytics Storage)
 - HTML5 & CSS3
-- `pathlib`, `string`, `collections`, `math`, `html`, `re` (Python standard library)
+- `pathlib`, `string`, `collections`, `math`, `html`, `re`, `time`, `tracemalloc` (Python standard library)
 
-## Stage 9 — Fuzzy Search & Typo Tolerance
+---
 
-In Stage 9, the search engine was upgraded with **Typo Tolerance** using the **Levenshtein Distance** algorithm implemented from scratch with **Dynamic Programming**.
+## Stage 10 — Search Analytics & Performance Monitoring
 
-### What is Levenshtein Distance?
-Levenshtein distance measures the minimum number of single-character edits required to transform one word into another:
-1. **Insertion**: inserting a missing character (e.g., `pythn` &rarr; `python`, distance = 1)
-2. **Deletion**: removing an extra character (e.g., `programmin` &rarr; `programming`, distance = 1)
-3. **Substitution**: replacing an incorrect character (e.g., `jython` &rarr; `python`, distance = 1)
+In Stage 10, an observability and performance monitoring layer was introduced to measure query patterns, index construction efficiency, query latencies, and memory consumption.
 
-### Dynamic Programming Recurrence
-For two strings $A$ of length $m$ and $B$ of length $n$, the DP matrix cell $dp[i][j]$ represents the edit distance between prefixes $A[0..i]$ and $B[0..j]$:
-
-- **Base Cases**: $dp[i][0] = i$ (deletions), $dp[0][j] = j$ (insertions)
-- **If characters match** ($A[i-1] == B[j-1]$): $dp[i][j] = dp[i-1][j-1]$
-- **If characters differ**:
-  $$dp[i][j] = 1 + \min(\text{deletion: } dp[i-1][j], \text{insertion: } dp[i][j-1], \text{substitution: } dp[i-1][j-1])$$
-
-### Thresholds (Maximum Edit Distance)
-To prevent bad or overly aggressive matches, thresholds adapt based on word length:
-- **Length 1–3**: Max distance = 0 (exact match only)
-- **Length 4–6**: Max distance &le; 1 (e.g., `pythn` &rarr; `python`)
-- **Length 7+**: Max distance &le; 2 (e.g., `programing` &rarr; `programming`)
-
-### Exact-Match Optimization & Vocabulary Lookup
-Fuzzy matching is only executed when a term does not exist in the indexed vocabulary. If the term already exists (exact match), it is resolved instantly ($O(1)$) without invoking Levenshtein distance.
-
-### Application Architecture
+### Architecture
 
 ```text
-                    User Query
-                         ↓
-                 Query Normalization
-                         ↓
-                  Query Tokenizer
-                         ↓
-                   Query Parser
-                         ↓
-                 Term Resolution
-                         ↓
-             ┌───────────┴───────────┐
-             ↓                       ↓
-        Exact Match            Fuzzy Match
-             │                       │
-             │                 Levenshtein
-             │                     Distance
-             │                       │
-             └───────────┬───────────┘
-                         ↓
-                  Inverted Index
-                         ↓
-                 Matching Documents
-                         ↓
-                   TF-IDF Ranking
-                         ↓
-                   Search Results
+                         User
+                          │
+                          ▼
+                    Search Interface
+                          │
+                          ▼
+                    Search Engine
+                          │
+               ┌──────────┴──────────┐
+               │                     │
+               ▼                     ▼
+           Results              Performance
+               │                 Measurement
+               │                     │
+               └──────────┬──────────┘
+                          ▼
+                   Search Event
+                          │
+                          ▼
+                  Analytics Storage (SQLite)
+                          │
+                          ▼
+                  Analytics Engine
+                          │
+                          ▼
+                 Analytics Dashboard (/analytics)
 ```
 
-### Algorithmic Complexity
-- **Levenshtein DP Matrix**: Time $O(m \times n)$, Space $O(m \times n)$ (or $O(\min(m, n))$ with two-row optimization).
-- **Vocabulary Search**: Compares query against vocabulary terms with a length-difference filter $|len(A) - len(B)| \le max\_dist$ to skip impossible candidates.
-- **Fuzzy Cache**: Resolved terms are cached in memory to eliminate repeated calculations for identical typos.
+### Metrics Recorded & Monitored
 
-### Boolean & Phrase Compatibility
-- **Boolean Expressions**: Typos inside Boolean queries are seamlessly resolved before evaluation (e.g. `pythn AND programing` &rarr; `python AND programming`).
-- **Phrase Searches**: Quoted phrases (e.g. `"machine learning"`) strictly preserve exact phrase matching.
+| Metric | Meaning |
+| :--- | :--- |
+| **Total Searches** | Total number of executed search queries |
+| **Average Latency** | Mean search execution time (measured via `time.perf_counter()`) |
+| **Median (P50) Latency** | Middle latency where 50% of searches finish at or below this duration |
+| **95th Percentile (P95)** | 95% of searches finish at or below this duration (critical for tail latency analysis) |
+| **Zero Result Rate** | Percentage of queries that returned 0 matching documents |
+| **Fuzzy Usage Rate** | Percentage of queries that triggered Levenshtein typo corrections |
+| **Phrase Usage Rate** | Percentage of queries utilizing positional phrase syntax (`"..."`) |
+| **Boolean Usage Rate** | Percentage of queries utilizing logical operators (`AND`, `OR`, `NOT`) |
+| **Vocabulary Size** | Total count of unique terms indexed across all documents |
+| **Total Documents** | Number of `.txt` documents loaded into the corpus |
+| **Index Build Time** | Time required to process tokens and build inverted & positional indexes |
+| **Indexing Throughput** | Speed of indexing expressed in `documents / second` |
+| **Memory Allocation** | Active and peak Python heap memory monitored via `tracemalloc` |
+
+### Search Event JSON Example
+
+Every search generates an anonymous performance event:
+
+```json
+{
+  "timestamp": "2026-08-25T08:12:30.123456Z",
+  "query": "pythn AND programing",
+  "normalized_query": "pythn and programing",
+  "result_count": 2,
+  "search_duration": 0.000656,
+  "query_parsing_time": 0.000045,
+  "term_resolution_time": 0.000382,
+  "retrieval_time": 0.000115,
+  "ranking_time": 0.000114,
+  "query_type": "boolean + fuzzy",
+  "fuzzy_used": true,
+  "phrase_used": false,
+  "boolean_used": true,
+  "zero_result": false
+}
+```
+
+### Fault-Tolerant & Privacy-Preserving Design
+- **Zero Personal Identifiers**: No IP addresses, cookies, browser fingerprints, or user identifiers are ever recorded.
+- **Fault Isolation**: Analytics recording runs in a safe failure-isolated block. If the SQLite database becomes locked or unavailable, search operations continue to return results seamlessly.
+
+---
 
 ## How to Install & Run
 
@@ -112,17 +133,26 @@ Fuzzy matching is only executed when a term does not exist in the indexed vocabu
    ```bash
    python app.py
    ```
-   Open your browser and navigate to `http://127.0.0.1:5000`
+   - Search Homepage: `http://127.0.0.1:5000`
+   - Analytics Dashboard: `http://127.0.0.1:5000/analytics`
+   - Analytics REST API: `http://127.0.0.1:5000/api/analytics/summary`
 
-4. **(Optional) Run the CLI version:**
+4. **Run the Automated Performance Benchmark Suite:**
+   ```bash
+   python benchmark.py
+   ```
+
+5. **(Optional) Run the CLI version:**
    ```bash
    python search.py
    ```
 
-5. **Run tests:**
+6. **Run all tests:**
    ```bash
    python -m unittest discover tests
    ```
+
+---
 
 ## Future Roadmap
 
@@ -136,5 +166,6 @@ This is a multi-stage project:
 6. ✅ **Stage 6** — Web Interface
 7. ✅ **Stage 7** — Boolean Search 
 8. ✅ **Stage 8** — Phrase Search
-9. ✅ **Stage 9** — Fuzzy Search & Typo Tolerance (current)
-10. Stage 10 — Search Analytics & Performance Monitoring
+9. ✅ **Stage 9** — Fuzzy Search & Typo Tolerance
+10. ✅ **Stage 10** — Search Analytics & Performance Monitoring (current)
+11. Stage 11 — Search Engine Optimization & Index Optimization

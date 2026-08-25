@@ -73,6 +73,45 @@ class TestAppRoutes(unittest.TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertNotIn(b'<script>alert(\'xss\')</script>', response.data)
 
+    # --- Stage 10 Analytics Dashboard & API Tests ---
+    def test_analytics_dashboard_route(self):
+        # Trigger a search first
+        self.app.get('/search?q=python')
+        response = self.app.get('/analytics')
+        self.assertEqual(response.status_code, 200)
+        self.assertIn(b'Search Analytics & Performance', response.data)
+        self.assertIn(b'Latency & Performance Profile', response.data)
+        self.assertIn(b'Index Structure & Construction', response.data)
+
+    def test_api_analytics_summary(self):
+        response = self.app.get('/api/analytics/summary')
+        self.assertEqual(response.status_code, 200)
+        data = response.get_json()
+        self.assertIn('total_searches', data)
+        self.assertIn('avg_latency_ms', data)
+        self.assertIn('zero_result_rate', data)
+
+    def test_api_analytics_top_queries(self):
+        response = self.app.get('/api/analytics/top-queries')
+        self.assertEqual(response.status_code, 200)
+        data = response.get_json()
+        self.assertIsInstance(data, list)
+
+    def test_api_analytics_performance(self):
+        response = self.app.get('/api/analytics/performance')
+        self.assertEqual(response.status_code, 200)
+        data = response.get_json()
+        self.assertIn('latency_percentiles_ms', data)
+        self.assertIn('memory_allocation', data)
+
+    def test_api_analytics_index(self):
+        response = self.app.get('/api/analytics/index')
+        self.assertEqual(response.status_code, 200)
+        data = response.get_json()
+        self.assertIn('total_documents', data)
+        self.assertIn('vocabulary_size', data)
+        self.assertIn('build_time_seconds', data)
+
 
 if __name__ == '__main__':
     unittest.main()

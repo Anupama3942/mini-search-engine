@@ -9,7 +9,10 @@
 <body>
     <header class="top-bar">
         <div class="container top-bar-content">
-            <a href="/" class="logo">Mini Search Engine</a>
+            <div class="brand-group">
+                <a href="/" class="logo">Mini Search Engine</a>
+                <a href="/analytics" class="nav-link">Analytics</a>
+            </div>
             {% block header_search %}{% endblock %}
         </div>
     </header>
@@ -19,7 +22,7 @@
     </main>
 
     <footer>
-        <p>Mini Search Engine - Stage 6 (Flask & Web Interface)</p>
+        <p>Mini Search Engine &bull; <a href="/analytics">Analytics & Performance Dashboard</a></p>
     </footer>
 </body>
 </html>
