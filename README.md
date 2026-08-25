@@ -245,5 +245,6 @@ python-search-engine-project/
 13. ✅ **Stage 13** — Advanced Ranking & BM25
 14. ✅ **Stage 14** — Learning-to-Rank (LTR) & Advanced Ranking Experiments
 15. ✅ **Stage 15** — Neural / Semantic Search & Vector Retrieval
-16. ✅ **Stage 16** — Search Engine Productionization, Advanced Retrieval Architecture & Deployment (current)
-17. Stage 17 — Advanced Search Features, Query Understanding, and Search Experience
+16. ✅ **Stage 16** — Search Engine Productionization, Advanced Retrieval Architecture & Deployment
+17. ✅ **Stage 17** — Query Understanding & Advanced Search (current)
+18. Stage 20 — Advanced Search Analytics & A/B Testing

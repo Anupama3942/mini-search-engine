@@ -9,10 +9,11 @@
     
     <form action="/search" method="GET" class="search-form-large">
         <label for="q" class="sr-only">Search query</label>
-        <div style="display: flex; gap: 8px; width: 100%; max-width: 680px; margin: 0 auto;">
+        <div style="display: flex; gap: 8px; width: 100%; max-width: 700px; margin: 0 auto;">
             <input type="text" id="q" name="q" placeholder="Search anything..." required autofocus autocomplete="off" style="flex: 1;">
             <select name="ranking" style="padding: 10px 14px; border: 1px solid #ccc; border-radius: 4px; background: #fff; font-size: 14px; cursor: pointer;">
                 <option value="bm25" selected>BM25 (Default)</option>
+                <option value="adaptive">Auto / Adaptive (Query Understanding)</option>
                 <option value="hybrid">Hybrid (BM25 + Semantic)</option>
                 <option value="semantic">Semantic Search (Dense)</option>
                 <option value="ltr">Learning-to-Rank (LTR)</option>
@@ -27,7 +28,7 @@
         <h3>Example searches</h3>
         <ul>
             <li><a href="/search?q=pythn&ranking=bm25">pythn (Typo tolerance)</a></li>
-            <li><a href="/search?q=programming+concepts&ranking=semantic">programming concepts (Semantic)</a></li>
+            <li><a href="/search?q=how+to+learn+programming&ranking=adaptive">how to learn programming (Adaptive)</a></li>
             <li><a href="/search?q=python+web+applications&ranking=hybrid">python web applications (Hybrid)</a></li>
             <li><a href="/search?q=&quot;machine+learning&quot;&ranking=bm25">"machine learning" (Phrase)</a></li>
             <li><a href="/search?q=python+AND+programming&ranking=ltr">python AND programming (LTR)</a></li>
@@ -38,11 +39,11 @@
     <div class="search-help">
         <h3>Search Syntax & Features</h3>
         <ul class="help-list">
+            <li><strong>Auto / Adaptive</strong>: Query understanding automatically detects intent (keyword vs. question vs. boolean) and selects optimal retrieval.</li>
             <li><strong>Hybrid Search</strong>: Fuses sparse BM25 keyword matching with dense semantic vector retrieval ($\alpha=0.5$).</li>
             <li><strong>Semantic Search</strong>: Dense vector embeddings and cosine similarity to find concepts beyond exact keywords.</li>
             <li><strong>Learning-to-Rank (LTR)</strong>: Machine-learned model combining BM25, TF-IDF, Query Coverage, Title, and Phrase features.</li>
-            <li><strong>BM25 Ranking</strong>: Probabilistic ranking with term-frequency saturation and document length normalization.</li>
-            <li><strong>Typo Tolerance & Boolean</strong>: Levenshtein typo correction and full Boolean query logic (AND, OR, NOT).</li>
+            <li><strong>Typo Tolerance & Synonyms</strong>: Context-aware spell correction and synonym expansion.</li>
         </ul>
     </div>
     

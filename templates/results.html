@@ -8,6 +8,7 @@
     <input type="text" id="q-top" name="q" value="{{ query }}" required>
     <select name="ranking" style="padding: 6px 10px; border: 1px solid #ccc; border-radius: 4px; background: #fff; font-size: 13px;">
         <option value="bm25" {% if ranking == 'bm25' %}selected{% endif %}>BM25</option>
+        <option value="adaptive" {% if ranking == 'adaptive' %}selected{% endif %}>Auto / Adaptive</option>
         <option value="hybrid" {% if ranking == 'hybrid' %}selected{% endif %}>Hybrid Search</option>
         <option value="semantic" {% if ranking == 'semantic' %}selected{% endif %}>Semantic (Dense)</option>
         <option value="ltr" {% if ranking == 'ltr' %}selected{% endif %}>Learning-to-Rank</option>

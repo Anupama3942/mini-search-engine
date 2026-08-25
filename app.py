@@ -239,6 +239,18 @@ def api_v1_ready():
     return readiness()
 
 
+@app.route("/api/v1/suggest")
+def api_v1_suggest():
+    """Query autocomplete suggestions endpoint."""
+    prefix = request.args.get("q", "").strip()
+    limit = request.args.get("limit", 5, type=int)
+    suggestions = search_service.get_suggestions(prefix, limit=limit)
+    return jsonify({
+        "prefix": prefix,
+        "suggestions": suggestions
+    })
+
+
 @app.route("/api/v1/metrics")
 def api_v1_metrics():
     """JSON snapshot of production system metrics."""

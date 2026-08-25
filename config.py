@@ -56,6 +56,17 @@ ENABLE_HYBRID = os.getenv("ENABLE_HYBRID", "true").lower() in ("true", "1", "yes
 ENABLE_LTR = os.getenv("ENABLE_LTR", "true").lower() in ("true", "1", "yes")
 ENABLE_ADVANCED_PIPELINES = os.getenv("ENABLE_ADVANCED_PIPELINES", "true").lower() in ("true", "1", "yes")
 
+# Query Understanding & NLP Configuration (Stage 17)
+SYNONYMS_PATH = Path(os.getenv("SYNONYMS_PATH", BASE_DIR / "synonyms.json"))
+SPELL_CORRECTION_ENABLED = os.getenv("SPELL_CORRECTION_ENABLED", "true").lower() in ("true", "1", "yes")
+SPELL_CORRECTION_THRESHOLD = float(os.getenv("SPELL_CORRECTION_THRESHOLD", 0.80))
+SYNONYM_EXPANSION_ENABLED = os.getenv("SYNONYM_EXPANSION_ENABLED", "true").lower() in ("true", "1", "yes")
+QUERY_EXPANSION_MODE = os.getenv("QUERY_EXPANSION_MODE", "conservative").lower().strip()  # "disabled", "conservative", "aggressive"
+MAX_EXPANSION_TERMS = int(os.getenv("MAX_EXPANSION_TERMS", 4))
+QUERY_ROUTING_ENABLED = os.getenv("QUERY_ROUTING_ENABLED", "true").lower() in ("true", "1", "yes")
+FIELD_BOOSTING_ENABLED = os.getenv("FIELD_BOOSTING_ENABLED", "true").lower() in ("true", "1", "yes")
+TITLE_BOOST = float(os.getenv("TITLE_BOOST", 1.5))
+
 # Caching Configuration
 CACHE_ENABLED = os.getenv("CACHE_ENABLED", "true").lower() in ("true", "1", "yes")
 QUERY_CACHE_SIZE = int(os.getenv("QUERY_CACHE_SIZE", 256))

@@ -1,0 +1,26 @@
+{
+  "version": "1.0",
+  "synonyms": {
+    "car": ["automobile", "vehicle"],
+    "automobile": ["car", "vehicle"],
+    "cheap": ["affordable", "inexpensive", "low-cost"],
+    "affordable": ["cheap", "inexpensive"],
+    "guide": ["tutorial", "handbook", "manual", "documentation"],
+    "tutorial": ["guide", "manual", "walkthrough"],
+    "programming": ["coding", "development", "software"],
+    "coding": ["programming", "development"],
+    "developer": ["programmer", "engineer", "coder"],
+    "fast": ["quick", "speedy", "high-performance"],
+    "database": ["storage", "datastore", "db"],
+    "network": ["networking", "connection"],
+    "web": ["website", "internet", "online"],
+    "learn": ["study", "understand", "master"],
+    "security": ["cybersecurity", "protection", "safe"]
+  },
+  "aggressive_extensions": {
+    "python": ["django", "flask", "scripting", "backend"],
+    "web": ["frontend", "backend", "html", "css", "javascript"],
+    "database": ["sql", "sqlite", "query", "relational"],
+    "machine learning": ["data science", "ai", "artificial intelligence"]
+  }
+}

@@ -1,0 +1,52 @@
+[
+  {
+    "mode": "Fixed BM25 (Baseline)",
+    "method": "bm25",
+    "synonyms_enabled": false,
+    "map": 0.9884,
+    "mrr": 1.0,
+    "ndcg@5": 0.99,
+    "p@5": 0.408,
+    "avg_latency_ms": 8.87
+  },
+  {
+    "mode": "Fixed Semantic",
+    "method": "semantic",
+    "synonyms_enabled": false,
+    "map": 0.7947,
+    "mrr": 0.8267,
+    "ndcg@5": 0.8172,
+    "p@5": 0.384,
+    "avg_latency_ms": 11.029
+  },
+  {
+    "mode": "Fixed Hybrid (alpha=0.5)",
+    "method": "hybrid",
+    "synonyms_enabled": false,
+    "map": 0.8816,
+    "mrr": 0.92,
+    "ndcg@5": 0.8806,
+    "p@5": 0.384,
+    "avg_latency_ms": 8.828
+  },
+  {
+    "mode": "Query-Adaptive Routing (Auto)",
+    "method": "adaptive",
+    "synonyms_enabled": false,
+    "map": 0.8884,
+    "mrr": 0.9,
+    "ndcg@5": 0.8952,
+    "p@5": 0.408,
+    "avg_latency_ms": 6.559
+  },
+  {
+    "mode": "Query-Adaptive + Synonyms",
+    "method": "adaptive",
+    "synonyms_enabled": true,
+    "map": 0.8884,
+    "mrr": 0.9,
+    "ndcg@5": 0.8952,
+    "p@5": 0.408,
+    "avg_latency_ms": 6.755
+  }
+]
