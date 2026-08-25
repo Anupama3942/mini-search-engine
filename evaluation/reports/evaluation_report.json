@@ -5,8 +5,8 @@
     "k1": 1.2,
     "b": 0.75
   },
-  "timestamp": "2026-08-25T03:45:03Z",
-  "evaluation_duration_seconds": 0.0454,
+  "timestamp": "2026-08-25T04:13:55Z",
+  "evaluation_duration_seconds": 0.0485,
   "queries_evaluated": 25,
   "summary_metrics": {
     "precision": 0.92,

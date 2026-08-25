@@ -38,7 +38,6 @@ MAX_QUERY_LENGTH = int(os.getenv("MAX_QUERY_LENGTH", 500))
 MIN_TOP_K = 1
 MAX_TOP_K = int(os.getenv("MAX_TOP_K", 100))
 DEFAULT_TOP_K = int(os.getenv("DEFAULT_TOP_K", 10))
-TOP_K_DEFAULT = DEFAULT_TOP_K
 DEFAULT_PAGE_SIZE = int(os.getenv("DEFAULT_PAGE_SIZE", 10))
 RATE_LIMIT_REQUESTS = int(os.getenv("RATE_LIMIT_REQUESTS", 120))  # requests per minute per IP
 RATE_LIMIT_WINDOW_SECONDS = int(os.getenv("RATE_LIMIT_WINDOW_SECONDS", 60))
@@ -50,7 +49,12 @@ SEARCH_TIMEOUT_SECONDS = float(os.getenv("SEARCH_TIMEOUT_SECONDS", 2.0))
 EARLY_TERMINATION_ENABLED = os.getenv("EARLY_TERMINATION_ENABLED", "true").lower() in ("true", "1", "yes")
 POSTING_LIST_SORTING = True
 
-# Feature Flags
+# Analytics & Experimentation (Stage 10, 16, 20)
+ANALYTICS_ENABLED = os.getenv("ANALYTICS_ENABLED", "true").lower() in ("true", "1", "yes")
+EXPERIMENTS_ENABLED = os.getenv("EXPERIMENTS_ENABLED", "true").lower() in ("true", "1", "yes")
+DEFAULT_EXPERIMENT_ID = os.getenv("DEFAULT_EXPERIMENT_ID", "bm25_vs_hybrid")
+ANALYTICS_RETENTION_DAYS = int(os.getenv("ANALYTICS_RETENTION_DAYS", 30))
+PRIVACY_MASK_QUERIES = os.getenv("PRIVACY_MASK_QUERIES", "false").lower() in ("true", "1", "yes")
 ENABLE_SEMANTIC = os.getenv("ENABLE_SEMANTIC", "true").lower() in ("true", "1", "yes")
 ENABLE_HYBRID = os.getenv("ENABLE_HYBRID", "true").lower() in ("true", "1", "yes")
 ENABLE_LTR = os.getenv("ENABLE_LTR", "true").lower() in ("true", "1", "yes")
@@ -104,6 +108,5 @@ def validate_hybrid_params(alpha: float) -> None:
 # Security & CORS
 ALLOWED_ORIGINS = [o.strip() for o in os.getenv("ALLOWED_ORIGINS", "*").split(",") if o.strip()]
 
-# Analytics & Observability
-ANALYTICS_ENABLED = os.getenv("ANALYTICS_ENABLED", "true").lower() in ("true", "1", "yes")
+# Benchmark Mode (suppress analytics during benchmarks)
 BENCHMARK_MODE = False

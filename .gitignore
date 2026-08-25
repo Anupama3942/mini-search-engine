@@ -22,3 +22,20 @@ index_cache.json
 # OS files
 .DS_Store
 Thumbs.db
+
+# Environment & secrets
+.env
+
+# Logs
+*.log
+
+# Model caches (can be regenerated)
+models/vector_index.json
+models/vector_index_metadata.json
+models/ltr_model.json
+models/ltr_metadata.json
+models/ltr_experiment_report.json
+
+# Benchmark & evaluation output artifacts
+evaluation/reports/*.csv
+evaluation/reports/*.json

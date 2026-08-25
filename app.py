@@ -1,7 +1,7 @@
 """
-Mini Search Engine - Stage 16 Production Web & API Application
+Mini Search Engine - Stage 16, 17 & 20 Production Web & API Application
 Clean Layered Architecture with Versioned REST API v1, Rate Limiting,
-Prometheus Metrics, Health & Readiness Probes, Structured Logging, and Web UI.
+Prometheus Metrics, Health & Readiness Probes, A/B Testing, and Search Analytics.
 """
 
 import time
@@ -14,12 +14,16 @@ import config
 from services.search_service import SearchService
 from services.index_manager import IndexManager
 from services.metrics import metrics_registry
+from experimentation import ExperimentRegistry
 from analytics import (
     get_summary_metrics,
     get_top_queries,
     get_top_zero_result_queries,
     get_query_type_distribution,
-    get_recent_searches
+    get_recent_searches,
+    get_ctr_analytics,
+    get_online_experiment_summary,
+    record_click
 )
 from performance import get_memory_usage
 from evaluation.evaluator import SearchEvaluator
@@ -40,6 +44,7 @@ app.config["DEBUG"] = config.DEBUG
 search_service = SearchService.get_instance()
 index_manager = IndexManager()
 evaluator = SearchEvaluator()
+experiment_registry = ExperimentRegistry.get_instance()
 
 
 # --- In-Memory Sliding Window Rate Limiter ---
@@ -93,7 +98,7 @@ def add_security_and_cors_headers(response):
         if origin in config.ALLOWED_ORIGINS:
             response.headers["Access-Control-Allow-Origin"] = origin
 
-    response.headers["Access-Control-Allow-Methods"] = "GET, OPTIONS"
+    response.headers["Access-Control-Allow-Methods"] = "GET, POST, OPTIONS"
     response.headers["Access-Control-Allow-Headers"] = "Content-Type, X-Request-ID"
     return response
 
@@ -132,18 +137,21 @@ def web_search():
         query=query, 
         results=results, 
         search_time=search_time,
-        ranking=ranking
+        ranking=ranking,
+        request_id=getattr(request, "request_id", uuid.uuid4().hex[:8])
     )
 
 
 @app.route("/analytics")
 def analytics_dashboard():
-    """Search analytics, system performance, and search quality monitoring dashboard."""
+    """Search analytics, system performance, A/B testing, and search quality monitoring dashboard."""
     summary = get_summary_metrics()
     top_queries = get_top_queries(limit=10)
     zero_queries = get_top_zero_result_queries(limit=10)
     type_dist = get_query_type_distribution()
     recent = get_recent_searches(limit=15)
+    ctr_data = get_ctr_analytics()
+    experiments_list = experiment_registry.list_experiments()
     index_stats = search_service.engine.get_index_statistics()
     memory_stats = get_memory_usage()
     query_cache_stats = search_service.engine.query_cache.get_stats()
@@ -161,6 +169,8 @@ def analytics_dashboard():
         zero_queries=zero_queries,
         type_dist=type_dist,
         recent=recent,
+        ctr_data=ctr_data,
+        experiments=experiments_list,
         index_stats=index_stats,
         memory=memory_stats,
         query_cache_stats=query_cache_stats,
@@ -202,18 +212,22 @@ def api_v1_search():
     Production Versioned Search API.
     Parameters:
       - q: query text (required)
-      - method: ranking algorithm (bm25, tfidf, frequency, ltr, semantic, hybrid, bm25_ltr, hybrid_ltr)
+      - method: ranking algorithm or 'adaptive' / 'experiment'
+      - experiment_id: optional experiment identifier
       - top_k: maximum candidate matches (1..100)
       - page: result page index (>= 1)
       - limit: items per page (1..100)
       - alpha: hybrid weight (0.0..1.0)
+      - debug: include query understanding breakdown (true/false)
     """
     query = request.args.get("q", "").strip()
     method = request.args.get("method", config.DEFAULT_RANKING_ALGORITHM).strip()
+    experiment_id = request.args.get("experiment_id")
     top_k = request.args.get("top_k", config.DEFAULT_TOP_K, type=int)
     page = request.args.get("page", 1, type=int)
     limit = request.args.get("limit", config.DEFAULT_PAGE_SIZE, type=int)
     alpha = request.args.get("alpha", type=float)
+    debug = request.args.get("debug", "false").lower() in ("true", "1")
 
     response = search_service.search(
         query=query,
@@ -222,21 +236,13 @@ def api_v1_search():
         page=page,
         limit=limit,
         alpha=alpha,
+        experiment_id=experiment_id,
+        debug=debug,
         request_id=request.request_id
     )
 
     status_code = response.get("status_code", 200)
     return jsonify(response), status_code
-
-
-@app.route("/api/v1/health")
-def api_v1_health():
-    return health()
-
-
-@app.route("/api/v1/ready")
-def api_v1_ready():
-    return readiness()
 
 
 @app.route("/api/v1/suggest")
@@ -251,10 +257,74 @@ def api_v1_suggest():
     })
 
 
+@app.route("/api/v1/health")
+def api_v1_health():
+    return health()
+
+
+@app.route("/api/v1/ready")
+def api_v1_ready():
+    return readiness()
+
+
 @app.route("/api/v1/metrics")
 def api_v1_metrics():
     """JSON snapshot of production system metrics."""
     return jsonify(metrics_registry.to_dict())
+
+
+@app.route("/api/v1/experiments")
+def api_v1_experiments():
+    """List configured search A/B experiments."""
+    return jsonify({
+        "experiments": experiment_registry.list_experiments()
+    })
+
+
+@app.route("/api/v1/experiments/<exp_id>")
+def api_v1_experiment_detail(exp_id: str):
+    """Retrieve details and online telemetry for a specific A/B experiment."""
+    exp = experiment_registry.get(exp_id)
+    if not exp:
+        return jsonify({"error": f"Experiment '{exp_id}' not found."}), 404
+    online_data = get_online_experiment_summary(exp_id)
+    return jsonify({
+        "experiment": exp.to_dict(),
+        "online_telemetry": online_data
+    })
+
+
+@app.route("/api/v1/analytics/click", methods=["POST"])
+def api_v1_click():
+    """Record result click event for search funnel and CTR attribution."""
+    data = request.get_json() or {}
+    req_id = data.get("request_id", "")
+    doc_id = data.get("doc_id", "")
+    pos = data.get("position", 1)
+    sess_id = data.get("session_id")
+    exp_id = data.get("experiment_id")
+    variant = data.get("variant")
+    method = data.get("search_method", "bm25")
+
+    if not req_id or not doc_id:
+        return jsonify({"error": "Missing required fields 'request_id' and 'doc_id'."}), 400
+
+    success = record_click(
+        request_id=req_id,
+        doc_id=doc_id,
+        position=pos,
+        session_id=sess_id,
+        experiment_id=exp_id,
+        variant=variant,
+        search_method=method
+    )
+    return jsonify({"status": "recorded" if success else "failed"}), 200
+
+
+@app.route("/api/v1/analytics/ctr")
+def api_v1_ctr():
+    """Retrieve Click-Through Rate analytics breakdown."""
+    return jsonify(get_ctr_analytics())
 
 
 @app.route("/api/v1/explain")
@@ -335,32 +405,6 @@ def api_cache():
         "query_cache": search_service.engine.query_cache.get_stats(),
         "fuzzy_cache": search_service.engine.fuzzy_cache.get_stats()
     })
-
-
-@app.route("/api/ltr/status")
-def api_ltr_status():
-    import json
-    if config.LTR_METADATA_PATH.exists():
-        try:
-            with open(config.LTR_METADATA_PATH, "r", encoding="utf-8") as f:
-                metadata = json.load(f)
-            return jsonify(metadata)
-        except Exception as e:
-            return jsonify({"status": "error", "message": str(e)}), 500
-    return jsonify({"status": "not_trained", "feature_version": config.FEATURE_VERSION})
-
-
-@app.route("/api/vector/status")
-def api_vector_status():
-    import json
-    if config.VECTOR_METADATA_PATH.exists():
-        try:
-            with open(config.VECTOR_METADATA_PATH, "r", encoding="utf-8") as f:
-                metadata = json.load(f)
-            return jsonify(metadata)
-        except Exception as e:
-            return jsonify({"status": "error", "message": str(e)}), 500
-    return jsonify({"status": "not_built", "embedding_model": config.EMBEDDING_MODEL_NAME})
 
 
 # --- Central Error Handlers ---

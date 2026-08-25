@@ -57,7 +57,7 @@
         <ul class="results-list">
             {% for result in results %}
             <li class="result-item">
-                <h3 class="result-title">{{ result.title }}</h3>
+                <h3 class="result-title"><a href="#" class="result-link" data-doc="{{ result.filename }}" data-pos="{{ loop.index }}">{{ result.title }}</a></h3>
                 <span class="result-filename">{{ result.filename }}</span>
                 <p class="result-snippet">{{ result.snippet | safe }}</p>
                 <div style="display: flex; gap: 12px; align-items: center; margin-top: 6px;">
@@ -69,4 +69,29 @@
         </ul>
     {% endif %}
 </div>
+
+<script>
+document.addEventListener("DOMContentLoaded", function() {
+    var links = document.querySelectorAll(".result-link");
+    var requestId = "{{ request_id | default('') }}";
+    links.forEach(function(link) {
+        link.addEventListener("click", function(e) {
+            var docId = link.getAttribute("data-doc");
+            var pos = parseInt(link.getAttribute("data-pos"), 10);
+            var payload = JSON.stringify({
+                request_id: requestId,
+                doc_id: docId,
+                position: pos,
+                search_method: "{{ ranking | default('bm25') }}"
+            });
+            if (navigator.sendBeacon) {
+                navigator.sendBeacon("/api/v1/analytics/click", new Blob([payload], {type: "application/json"}));
+            } else {
+                fetch("/api/v1/analytics/click", {method: "POST", headers: {"Content-Type": "application/json"}, body: payload});
+            }
+        });
+    });
+});
+</script>
 {% endblock %}
+

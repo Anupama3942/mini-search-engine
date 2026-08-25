@@ -1,6 +1,6 @@
 """
-Mini Search Engine - Stage 16 & 17
-Production Search Service & Query Understanding Orchestrator
+Mini Search Engine - Stage 16, 17 & 20
+Production Search Service & A/B Experimentation Orchestrator
 """
 
 import time
@@ -15,14 +15,15 @@ from services.retrieval import BM25Retriever, SemanticRetriever, HybridRetriever
 from ranking.ltr import LTRRanker
 from ranking import get_ranker
 from query_understanding import QueryUnderstandingPipeline, QueryRepresentation
+from experimentation import ExperimentRegistry
 
 logger = logging.getLogger("search_engine")
 
 
 class SearchService:
     """
-    Central search service coordinating query understanding, multi-stage retrieval,
-    ranking, score attribution, pagination, metrics recording, and fallback handling.
+    Central search service coordinating query understanding, A/B testing,
+    multi-stage retrieval, ranking, score attribution, pagination, metrics recording, and fallback handling.
     """
 
     _instance = None
@@ -33,6 +34,7 @@ class SearchService:
         self.semantic_retriever = SemanticRetriever()
         self.hybrid_retriever = HybridRetriever(self.engine)
         self.ltr_ranker = LTRRanker()
+        self.experiment_registry = ExperimentRegistry.get_instance()
         
         # Initialize Query Understanding Pipeline
         doc_titles = [f.replace(".txt", "").capitalize() for f in self.engine.documents.keys()]
@@ -74,13 +76,16 @@ class SearchService:
         page: int = 1,
         limit: int = config.DEFAULT_PAGE_SIZE,
         alpha: Optional[float] = None,
+        experiment_id: Optional[str] = None,
+        session_id: Optional[str] = None,
         debug: bool = False,
         request_id: Optional[str] = None
     ) -> Dict[str, Any]:
         """
-        Execute search request through query understanding, strategy routing, or two-stage pipelines.
+        Execute search request through A/B experimentation, query understanding, strategy routing, or two-stage pipelines.
         """
         req_id = request_id or uuid.uuid4().hex[:8]
+        sess_id = session_id or uuid.uuid4().hex[:8]
         t_start = time.perf_counter()
         raw_method = (method or config.DEFAULT_RANKING_ALGORITHM).lower().strip()
 
@@ -94,18 +99,25 @@ class SearchService:
                 "status_code": 400
             }
 
-        # 2. Query Understanding Pipeline Analysis (Stage 17)
-        query_repr = self.qu_pipeline.analyze(query)
-        
-        # Adaptive Query Routing (if method is 'adaptive' or 'auto')
-        if raw_method in ("adaptive", "auto", "routed"):
+        # 2. A/B Experiment Variant Assignment (Stage 20)
+        active_experiment = None
+        assigned_variant = None
+        if raw_method in ("experiment", "ab_test") or experiment_id:
+            exp_id = experiment_id or config.DEFAULT_EXPERIMENT_ID
+            assigned_variant, exp_method = self.experiment_registry.assign(exp_id, sess_id or query)
+            effective_method = exp_method
+            active_experiment = exp_id
+        elif raw_method in ("adaptive", "auto", "routed"):
+            query_repr = self.qu_pipeline.analyze(query)
             effective_method = query_repr.suggested_strategy
         else:
             effective_method = raw_method
 
+        # 3. Query Understanding Pipeline Analysis (Stage 17)
+        query_repr = self.qu_pipeline.analyze(query)
         search_query_text = query_repr.effective_query or query
 
-        # 3. Pipeline Execution
+        # 4. Pipeline Execution
         try:
             if effective_method in ("bm25_ltr", "bm25->ltr"):
                 results = self._execute_two_stage_bm25_ltr(search_query_text, top_k=top_k)
@@ -141,7 +153,7 @@ class SearchService:
             total_duration = round(time.perf_counter() - t_start, 6)
             metrics_registry.record_request(effective_method, total_duration, success=True)
 
-            # 4. Pagination Slicing
+            # 5. Pagination Slicing
             total_count = len(results)
             start_idx = (page - 1) * limit
             end_idx = start_idx + limit
@@ -153,9 +165,12 @@ class SearchService:
 
             response_data = {
                 "request_id": req_id,
+                "session_id": sess_id,
                 "query": query,
                 "effective_query": search_query_text,
                 "method": effective_method,
+                "experiment_id": active_experiment,
+                "variant": assigned_variant,
                 "total_results": total_count,
                 "page": page,
                 "limit": limit,

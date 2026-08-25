@@ -502,7 +502,7 @@ class SearchEngine:
         self, 
         query: str, 
         log_analytics: bool = True, 
-        top_k: Optional[int] = config.TOP_K_DEFAULT,
+        top_k: Optional[int] = config.DEFAULT_TOP_K,
         ranking_algorithm: str = config.DEFAULT_RANKING_ALGORITHM,
         k1: Optional[float] = None,
         b: Optional[float] = None,

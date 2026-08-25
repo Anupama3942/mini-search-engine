@@ -1,6 +1,6 @@
 pipeline,method_code,map,mrr,ndcg@5,ndcg@10,p@5,avg_latency_ms,p95_latency_ms
-BM25 (Sparse),bm25,0.9884,1.0,0.99,0.9948,0.408,6.762,13.871
-Semantic (Dense),semantic,0.8347,0.8667,0.8467,0.8698,0.384,9.874,13.934
-Hybrid (Sparse+Dense),hybrid,0.8816,0.92,0.8806,0.9037,0.384,6.581,7.894
-BM25 -> LTR (Two-Stage),bm25_ltr,0.9671,0.9733,0.9738,0.9786,0.408,0.763,2.071
-Hybrid -> LTR (Two-Stage),hybrid_ltr,0.6806,0.6793,0.7212,0.747,0.384,4.688,8.642
+BM25 (Sparse),bm25,0.9884,1.0,0.99,0.9948,0.408,9.837,23.834
+Semantic (Dense),semantic,0.8127,0.8467,0.8309,0.8539,0.384,13.007,24.89
+Hybrid (Sparse+Dense),hybrid,0.8816,0.92,0.8806,0.9037,0.384,9.084,16.495
+BM25 -> LTR (Two-Stage),bm25_ltr,0.992,1.0,0.9915,0.9964,0.408,2.47,9.153
+Hybrid -> LTR (Two-Stage),hybrid_ltr,0.7305,0.738,0.7717,0.7832,0.4,6.499,15.816

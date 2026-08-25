@@ -1,42 +1,82 @@
 # Mini Search Engine
 
-A production-grade, high-performance search service and web engine built with Python. Supports classical inverted index search, probabilistic BM25 ranking, Learning-to-Rank (LTR), Neural/Semantic dense vector retrieval, and two-stage hybrid retrieval pipelines.
+A production-grade, full-stack information retrieval system built from scratch in Python. Implements classical inverted index search, probabilistic BM25 ranking, Learning-to-Rank (LTR), neural/semantic dense vector retrieval, hybrid search fusion, query understanding, A/B experimentation, and two-stage retrieval pipelines.
 
-Built as an engineering project to understand Information Retrieval, Algorithmic Data Structures, Machine Learning, Two-Stage Search Architecture, Observability, and Production Web Services.
-
----
-
-## Key Features
-
-- **6 Pluggable Search & Ranking Strategies:**
-  1. **Frequency Ranking (Sparse TF)**
-  2. **TF-IDF Ranking (Sparse TF $\times$ IDF)**
-  3. **BM25 Ranking (Probabilistic saturation & document length normalization)**
-  4. **Learning-to-Rank (LTR Pointwise Logistic Regression with L2 Regularization)**
-  5. **Semantic Search (Dense Vector Embeddings & Exact Cosine Similarity Retrieval)**
-  6. **Hybrid Search (Sparse BM25 + Dense Semantic Fusion with Min-Max Normalization)**
-- **Two-Stage Production Retrieval Pipelines:**
-  - **BM25 $\to$ LTR (Candidate Retrieval $\to$ ML Reranking)**
-  - **Hybrid $\to$ LTR (Sparse+Dense Fusion $\to$ ML Reranking)**
-- **Production REST API v1 (`/api/v1/...`) with Request ID Tracing (`X-Request-ID`)**
-- **Observability & Health Probes:**
-  - Liveness probe (`GET /health` & `GET /api/v1/health`)
-  - Readiness probe (`GET /ready` & `GET /api/v1/ready`)
-  - Prometheus plain text metrics exporter (`GET /metrics`)
-  - JSON system metrics snapshot (`GET /api/v1/metrics`)
-- **Resilience & Security:**
-  - Sliding-window IP rate limiter
-  - Security headers (`X-Content-Type-Options`, `X-Frame-Options`, `Referrer-Policy`)
-  - Bounded input validation (`MAX_QUERY_LENGTH=500`, `MAX_TOP_K=100`)
-  - Graceful degradation with automatic fallback chain down to BM25
-  - Atomic multi-index construction (`build_index.py`)
-- **Query Processing:** Boolean search (`AND`, `OR`, `NOT`, `( )`), Exact phrase matching (`"exact phrase"`), Levenshtein typo tolerance.
-- **High-Performance Caching:** `BoundedLRUCache` with automated invalidation.
-- **Docker & VPS Deployment:** Multi-stage `Dockerfile`, `.dockerignore`, and systemd unit file (`search-engine.service`).
+Built progressively across 21 stages as an engineering portfolio project covering Information Retrieval, Data Structures, Machine Learning, NLP, Production Architecture, and Search Quality Evaluation.
 
 ---
 
-## Production System Architecture
+## Features
+
+### Search & Ranking
+- **6 Pluggable Ranking Strategies:** Frequency, TF-IDF, BM25, LTR, Semantic, Hybrid
+- **Two-Stage Pipelines:** BM25 → LTR and Hybrid → LTR (candidate retrieval + ML reranking)
+- **Boolean Search:** `AND`, `OR`, `NOT`, nested parentheses
+- **Phrase Search:** Exact positional matching with `"quoted phrases"`
+- **Fuzzy Search:** Levenshtein edit distance typo tolerance with "Did you mean?" suggestions
+
+### Query Understanding
+- Spell correction with frequency-weighted confidence scoring
+- Synonym expansion (conservative and aggressive modes)
+- Intent classification (keyword, boolean, phrase, informational, navigational)
+- Query-adaptive routing to optimal retrieval strategy
+- Autocomplete suggestions (`/api/v1/suggest`)
+
+### Analytics & Experimentation
+- Search analytics dashboard with CTR, latency percentiles, and query distributions
+- A/B experimentation platform with deterministic SHA-256 variant assignment
+- Offline evaluation with Welch's t-test and 95% confidence intervals
+- Click-through tracking with position attribution
+
+### Production Infrastructure
+- REST API v1 with request ID tracing (`X-Request-ID`)
+- Health (`/health`) and readiness (`/ready`) probes
+- Prometheus metrics exporter (`/metrics`)
+- IP-based sliding-window rate limiter (120 req/min)
+- Security headers (CORS, CSP, XSS protection)
+- Docker deployment with non-root container user
+- Systemd service configuration for Linux VPS
+- Atomic multi-index construction with zero-downtime rebuilds
+
+### Quality & Testing
+- 25 ground-truth evaluation queries with relevance judgments
+- Automated quality gate (MAP ≥ 0.70, MRR ≥ 0.75, P@1 ≥ 0.70)
+- 138 unit, integration, regression, and API tests across 15 test suites
+- LRU query and fuzzy caching with automated invalidation
+
+---
+
+## Search Quality Results
+
+Evaluated across 25 ground-truth queries (`python evaluate.py`):
+
+| Metric | Value |
+| :--- | :--- |
+| **Mean Average Precision (MAP)** | **0.9884** |
+| **Mean Reciprocal Rank (MRR)** | **1.0000** |
+| **NDCG@5** | **0.9900** |
+| **NDCG@10** | **0.9948** |
+| **Precision@1** | **0.9200** |
+| **Recall@5** | **0.9920** |
+| **Recall@10** | **1.0000** |
+| **F1-Score** | **0.9583** |
+| **Quality Gate** | **PASS** |
+
+### Production Pipeline Benchmark
+
+| Pipeline | MAP | MRR | NDCG@5 | Avg Latency | P95 Latency |
+| :--- | :--- | :--- | :--- | :--- | :--- |
+| **BM25 (Sparse)** | 0.9884 | 1.0000 | 0.9900 | 9.84 ms | 23.83 ms |
+| **BM25 → LTR** | **0.9920** | **1.0000** | **0.9915** | **2.47 ms** | **9.15 ms** |
+| **Hybrid (Sparse+Dense)** | 0.8816 | 0.9200 | 0.8806 | 9.08 ms | 16.50 ms |
+| **Semantic (Dense)** | 0.8127 | 0.8467 | 0.8309 | 13.01 ms | 24.89 ms |
+| **Hybrid → LTR** | 0.7305 | 0.7380 | 0.7717 | 6.50 ms | 15.82 ms |
+
+**Best overall pipeline:** BM25 → LTR (MAP=0.9920, 2.47ms average latency)
+
+---
+
+## Architecture
 
 ```text
                                INTERNET / CLIENT
@@ -48,6 +88,10 @@ Built as an engineering project to understand Information Retrieval, Algorithmic
                                       ▼
                               REST API v1 / Web UI
                          (Security Headers & Rate Limiting)
+                                      │
+                                      ▼
+                            Query Understanding
+                   (Spell Check → Synonyms → Intent → Routing)
                                       │
                                       ▼
                                 SearchService
@@ -77,117 +121,121 @@ Built as an engineering project to understand Information Retrieval, Algorithmic
 
 ---
 
-## Production Pipeline Benchmark Comparison
+## Technology Stack
 
-Evaluated across the 25-query ground-truth benchmark (`python benchmark_production.py`):
+| Technology | Purpose |
+| :--- | :--- |
+| **Python 3.12+** | Core language (educational, stdlib-rich) |
+| **Flask 3.0.3** | Web framework, REST API, template rendering |
+| **SQLite** | Analytics event storage (zero-config) |
+| **Pure Python IR** | Inverted index, BM25, TF-IDF (no black boxes) |
+| **Pure Python ML** | LTR logistic regression, embeddings (no sklearn/torch) |
+| **Jinja2** | Server-rendered HTML templates |
+| **Docker** | Containerized deployment |
+| **Prometheus** | Observability metrics format |
 
-| Retrieval Pipeline | MAP | MRR | NDCG@5 | Precision@5 | Avg Latency | P95 Latency |
-| :--- | :--- | :--- | :--- | :--- | :--- | :--- |
-| **BM25 (Sparse)** | **0.9884** | **1.0000** | **0.9900** | **0.4080** | 6.76 ms | 13.87 ms |
-| **BM25 $\to$ LTR (Two-Stage)** | **0.9671** | **0.9733** | **0.9738** | **0.4080** | **0.76 ms** | **2.07 ms** |
-| **Hybrid (Sparse + Dense)** | **0.8816** | **0.9200** | **0.8806** | **0.3840** | 6.58 ms | 7.89 ms |
-| **Semantic (Dense 64-dim)** | **0.8347** | **0.8667** | **0.8467** | **0.3840** | 9.87 ms | 13.93 ms |
-| **Hybrid $\to$ LTR (Two-Stage)** | **0.6806** | **0.6793** | **0.7212** | **0.3840** | 4.69 ms | 8.64 ms |
+> **Note:** The only external dependency is `Flask==3.0.3`. Everything else — BM25, TF-IDF, LTR, embeddings, vector search, evaluation metrics — is implemented from scratch using Python's standard library.
 
 ---
 
-## REST API v1 Specification
+## Installation & Running
 
-### 1. Execute Search Query
-```http
-GET /api/v1/search?q={query}&method={method}&top_k={top_k}&page={page}&limit={limit}
-```
-**Example Request:**
+### 1. Clone & Setup
 ```bash
-curl "http://localhost:5000/api/v1/search?q=python+programming&method=bm25_ltr&top_k=10&page=1&limit=5"
-```
-**Example Response:**
-```json
-{
-  "request_id": "e802b75f",
-  "query": "python programming",
-  "method": "bm25_ltr",
-  "total_results": 4,
-  "page": 1,
-  "limit": 5,
-  "total_pages": 1,
-  "search_duration_seconds": 0.00076,
-  "results": [
-    {
-      "filename": "python.txt",
-      "title": "Python",
-      "score": 0.9987,
-      "snippet": "<mark>Python</mark> is a high-level, general-purpose programming language...",
-      "ranking_algorithm": "bm25->ltr"
-    }
-  ]
-}
+git clone https://github.com/Anupama3942/mini-search-engine.git
+cd mini-search-engine
+python -m venv .venv
+
+# Windows:
+.venv\Scripts\activate
+# Linux/macOS:
+source .venv/bin/activate
+
+pip install -r requirements.txt
 ```
 
-### 2. Health & Readiness Probes
-- `GET /health` or `GET /api/v1/health` $\to$ Returns `{"status": "healthy"}`
-- `GET /ready` or `GET /api/v1/ready` $\to$ Returns `{"ready": true, "status": "ready"}`
+### 2. Build Indexes & Train Models
+```bash
+python build_index.py
+python train_ltr.py
+```
 
-### 3. Prometheus Metrics Exporter
-- `GET /metrics` $\to$ Returns Prometheus formatted application counters and P95 latencies.
+### 3. Start Server
+```bash
+python app.py
+```
+- **Homepage:** http://localhost:5000
+- **Analytics Dashboard:** http://localhost:5000/analytics
+- **Health Probe:** http://localhost:5000/health
+- **Prometheus Metrics:** http://localhost:5000/metrics
 
----
+### 4. Run Tests (138 tests)
+```bash
+python -m unittest discover tests
+```
 
-## Installation & Running Locally
-
-1. **Clone repository and create virtual environment:**
-   ```bash
-   python -m venv .venv
-   # Windows:
-   .venv\Scripts\activate
-   # Linux/macOS:
-   source .venv/bin/activate
-   ```
-
-2. **Install dependencies:**
-   ```bash
-   pip install -r requirements.txt
-   ```
-
-3. **Build Indexes & Train Models:**
-   ```bash
-   python build_index.py
-   python train_ltr.py
-   ```
-
-4. **Run Search Server:**
-   ```bash
-   python app.py
-   ```
-   - Homepage: `http://localhost:5000`
-   - Analytics Dashboard: `http://localhost:5000/analytics`
-   - Prometheus Metrics: `http://localhost:5000/metrics`
-   - Readiness Probe: `http://localhost:5000/ready`
-
-5. **Run Full Test Suite (122 tests):**
-   ```bash
-   python -m unittest discover tests
-   ```
+### 5. Run Quality Evaluation
+```bash
+python evaluate.py
+python benchmark_production.py
+python run_experiment.py
+```
 
 ---
 
 ## Docker Deployment
 
-1. **Build the container image:**
-   ```bash
-   docker build -t mini-search-engine:latest .
-   ```
+```bash
+# Build
+docker build -t mini-search-engine:latest .
 
-2. **Run container:**
-   ```bash
-   docker run -d -p 5000:5000 --name search-engine mini-search-engine:latest
-   ```
+# Run
+docker run -d -p 5000:5000 --name search-engine mini-search-engine:latest
 
-3. **Verify container health:**
-   ```bash
-   docker ps
-   curl http://localhost:5000/health
-   ```
+# Verify
+curl http://localhost:5000/health
+curl "http://localhost:5000/api/v1/search?q=python&method=bm25"
+```
+
+---
+
+## REST API v1
+
+### Search
+```bash
+curl "http://localhost:5000/api/v1/search?q=python+programming&method=bm25&top_k=10"
+```
+
+### Autocomplete
+```bash
+curl "http://localhost:5000/api/v1/suggest?q=pyth"
+```
+
+### Health & Readiness
+```bash
+curl http://localhost:5000/api/v1/health
+curl http://localhost:5000/api/v1/ready
+```
+
+### A/B Experiments
+```bash
+curl http://localhost:5000/api/v1/experiments
+```
+
+See [API_DOCUMENTATION.md](API_DOCUMENTATION.md) for complete endpoint documentation.
+
+---
+
+## Example Searches
+
+| Query | Type | Results |
+| :--- | :--- | :--- |
+| `python` | Keyword | Matches python.txt (rank 1) |
+| `python AND programming` | Boolean AND | Intersection of both terms |
+| `python OR java` | Boolean OR | Union of documents |
+| `"web development"` | Phrase | Exact positional adjacency match |
+| `pythn` | Fuzzy (typo) | Corrected to "python" automatically |
+| `beginner python` | Semantic | Conceptual matching via embeddings |
 
 ---
 
@@ -198,53 +246,115 @@ python-search-engine-project/
 ├── app.py                      # Production Flask Web Server & API v1
 ├── config.py                   # Central environment configuration
 ├── search.py                   # Inverted index search engine core
-├── benchmark_production.py     # Two-stage pipeline benchmarking CLI
+├── analytics.py                # Search event logging & CTR analytics
 ├── build_index.py              # Atomic multi-index build tool
-├── train_ltr.py                # LTR training pipeline & ablation
-├── evaluate.py                 # 6-way search quality evaluation
+├── train_ltr.py                # LTR training pipeline
+├── evaluate.py                 # Search quality evaluation CLI
+├── benchmark_production.py     # Production pipeline benchmarking
+├── run_experiment.py           # Offline A/B experiment runner
 ├── services/                   # Service layer
 │   ├── search_service.py       # Central SearchService & two-stage pipelines
-│   ├── index_manager.py        # Centralized atomic IndexManager
-│   ├── retrieval.py            # Base, BM25, Semantic, Hybrid retrievers
-│   └── metrics.py              # Thread-safe MetricsRegistry & Prometheus
+│   ├── index_manager.py        # Atomic IndexManager
+│   ├── retrieval.py            # BM25, Semantic, Hybrid retrievers
+│   └── metrics.py              # MetricsRegistry & Prometheus exporter
+├── query_understanding/        # NLP query processing pipeline
+│   ├── pipeline.py             # Orchestrator (spell → synonyms → intent)
+│   ├── spelling.py             # Levenshtein spell correction
+│   ├── synonyms.py             # Synonym expansion
+│   └── intent.py               # Intent classification & routing
 ├── semantic/                   # Vector retrieval & embeddings
-│   ├── embeddings.py           # EmbeddingService & dense models
-│   ├── vector_store.py         # NumpyVectorStore & cosine similarity
-│   └── hybrid.py               # HybridSearchEngine & Min-Max fusion
-├── ranking/                    # Ranking strategies
-│   ├── bm25.py                 # BM25 Ranker
-│   ├── ltr.py                  # LTR Ranker with BM25 fallback
-│   ├── semantic.py             # Semantic Ranker
-│   └── hybrid.py               # Hybrid Ranker
-├── evaluation/                 # Relevance judgments & IR metrics
+│   ├── embeddings.py           # Dense embedding generation
+│   ├── vector_store.py         # Vector store & cosine similarity
+│   └── hybrid.py               # Hybrid fusion engine
+├── ranking/                    # Pluggable ranking strategies
+│   ├── bm25.py, tfidf.py       # Classical rankers
+│   ├── ltr.py, semantic.py      # ML & neural rankers
+│   └── hybrid.py               # Hybrid fusion ranker
+├── ltr/                        # Learning-to-Rank framework
+│   ├── features.py             # Feature extraction (8 features)
+│   ├── models.py               # Pointwise & pairwise models
+│   └── dataset.py              # Training data generation
+├── evaluation/                 # IR evaluation framework
+│   ├── metrics.py              # Precision, Recall, MAP, MRR, NDCG
+│   ├── evaluator.py            # SearchEvaluator & quality gates
+│   └── relevance_judgments.json # 25 ground-truth queries
+├── experimentation/            # A/B testing framework
+│   ├── models.py               # Experiment definition & SHA-256 hashing
+│   ├── registry.py             # Experiment registry
+│   ├── statistics.py           # Welch's t-test & confidence intervals
+│   └── offline_evaluator.py    # Offline A/B evaluation
 ├── templates/                  # Jinja2 HTML templates
-├── static/                     # CSS stylesheets
-├── tests/                      # 122 Unit, integration, & API tests
-├── Dockerfile                  # Production container definition
-├── search-engine.service       # Linux systemd unit service file
-├── PRODUCTION_CHECKLIST.md     # Deployment verification checklist
-└── TROUBLESHOOTING.md          # Diagnostics & disaster recovery
+├── static/css/                 # Stylesheets
+├── tests/                      # 138 tests across 15 suites
+├── documents/                  # Document corpus (6 files)
+├── Dockerfile                  # Production container
+├── search-engine.service       # Systemd unit file
+├── ARCHITECTURE.md             # System architecture documentation
+├── FEATURES.md                 # Complete feature inventory
+├── API_DOCUMENTATION.md        # REST API documentation
+├── SECURITY.md                 # Security audit
+├── EXPERIMENTATION.md          # A/B testing documentation
+├── QUERY_UNDERSTANDING.md      # Query understanding documentation
+└── INTERVIEW_QUESTIONS.md      # Technical interview preparation
 ```
+
+---
+
+## Documentation
+
+| Document | Description |
+| :--- | :--- |
+| [ARCHITECTURE.md](ARCHITECTURE.md) | System architecture, pipelines, data flow |
+| [FEATURES.md](FEATURES.md) | Complete feature inventory & search method comparison |
+| [API_DOCUMENTATION.md](API_DOCUMENTATION.md) | REST API endpoints, parameters, examples |
+| [SECURITY.md](SECURITY.md) | Security audit & configuration |
+| [TECH_STACK.md](TECH_STACK.md) | Technology stack with rationale |
+| [SEARCH_ENGINE_NOTES.md](SEARCH_ENGINE_NOTES.md) | Learning documentation & IR concepts |
+| [EXPERIMENTATION.md](EXPERIMENTATION.md) | A/B testing & statistical analysis |
+| [QUERY_UNDERSTANDING.md](QUERY_UNDERSTANDING.md) | Query processing pipeline |
+| [INTERVIEW_QUESTIONS.md](INTERVIEW_QUESTIONS.md) | 30+ technical interview Q&A |
+| [PORTFOLIO.md](PORTFOLIO.md) | Portfolio project description |
+| [CHANGELOG.md](CHANGELOG.md) | Version history |
+| [FUTURE.md](FUTURE.md) | Future improvement roadmap |
+
+---
+
+## Limitations
+
+- Small document corpus (6 files) — designed for educational demonstration
+- Single-node architecture — no distributed indexing or sharding
+- Pure Python embeddings (64-dim) — not transformer-based
+- Limited LTR training data — small ground-truth dataset
+- No authentication or authorization on API endpoints
+- No CI/CD pipeline — manual testing and deployment
+- No real-time indexing — batch rebuild required for new documents
 
 ---
 
 ## Roadmap
 
-1. ✅ **Stage 1** — Basic document search
-2. ✅ **Stage 2** — Inverted Index 
+1. ✅ **Stage 1** — Basic Document Search
+2. ✅ **Stage 2** — Inverted Index
 3. ✅ **Stage 3** — Text Processing
 4. ✅ **Stage 4** — Search Ranking
 5. ✅ **Stage 5** — TF-IDF Ranking
 6. ✅ **Stage 6** — Web Interface
-7. ✅ **Stage 7** — Boolean Search 
+7. ✅ **Stage 7** — Boolean Search
 8. ✅ **Stage 8** — Phrase Search
 9. ✅ **Stage 9** — Fuzzy Search & Typo Tolerance
 10. ✅ **Stage 10** — Search Analytics & Performance Monitoring
 11. ✅ **Stage 11** — Search Engine & Index Optimization
 12. ✅ **Stage 12** — Search Quality Evaluation & Relevance Testing
 13. ✅ **Stage 13** — Advanced Ranking & BM25
-14. ✅ **Stage 14** — Learning-to-Rank (LTR) & Advanced Ranking Experiments
+14. ✅ **Stage 14** — Learning-to-Rank (LTR)
 15. ✅ **Stage 15** — Neural / Semantic Search & Vector Retrieval
-16. ✅ **Stage 16** — Search Engine Productionization, Advanced Retrieval Architecture & Deployment
-17. ✅ **Stage 17** — Query Understanding & Advanced Search (current)
-18. Stage 20 — Advanced Search Analytics & A/B Testing
+16. ✅ **Stage 16** — Production Architecture & Deployment
+17. ✅ **Stage 17** — Query Understanding & Advanced Search
+18. ✅ **Stage 20** — Advanced Search Analytics & A/B Testing
+19. ✅ **Stage 21** — Final Capstone, Polish & Portfolio Release
+
+---
+
+## License
+
+[MIT License](LICENSE)

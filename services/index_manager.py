@@ -6,7 +6,6 @@ Centralized Index Manager & Atomic Index Operations
 import os
 import json
 import time
-import shutil
 from pathlib import Path
 from typing import Dict, Any, Optional
 

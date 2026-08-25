@@ -7,19 +7,19 @@
     "ndcg@5": 0.99,
     "ndcg@10": 0.9948,
     "p@5": 0.408,
-    "avg_latency_ms": 6.762,
-    "p95_latency_ms": 13.871
+    "avg_latency_ms": 9.837,
+    "p95_latency_ms": 23.834
   },
   {
     "pipeline": "Semantic (Dense)",
     "method_code": "semantic",
-    "map": 0.8347,
-    "mrr": 0.8667,
-    "ndcg@5": 0.8467,
-    "ndcg@10": 0.8698,
+    "map": 0.8127,
+    "mrr": 0.8467,
+    "ndcg@5": 0.8309,
+    "ndcg@10": 0.8539,
     "p@5": 0.384,
-    "avg_latency_ms": 9.874,
-    "p95_latency_ms": 13.934
+    "avg_latency_ms": 13.007,
+    "p95_latency_ms": 24.89
   },
   {
     "pipeline": "Hybrid (Sparse+Dense)",
@@ -29,29 +29,29 @@
     "ndcg@5": 0.8806,
     "ndcg@10": 0.9037,
     "p@5": 0.384,
-    "avg_latency_ms": 6.581,
-    "p95_latency_ms": 7.894
+    "avg_latency_ms": 9.084,
+    "p95_latency_ms": 16.495
   },
   {
     "pipeline": "BM25 -> LTR (Two-Stage)",
     "method_code": "bm25_ltr",
-    "map": 0.9671,
-    "mrr": 0.9733,
-    "ndcg@5": 0.9738,
-    "ndcg@10": 0.9786,
+    "map": 0.992,
+    "mrr": 1.0,
+    "ndcg@5": 0.9915,
+    "ndcg@10": 0.9964,
     "p@5": 0.408,
-    "avg_latency_ms": 0.763,
-    "p95_latency_ms": 2.071
+    "avg_latency_ms": 2.47,
+    "p95_latency_ms": 9.153
   },
   {
     "pipeline": "Hybrid -> LTR (Two-Stage)",
     "method_code": "hybrid_ltr",
-    "map": 0.6806,
-    "mrr": 0.6793,
-    "ndcg@5": 0.7212,
-    "ndcg@10": 0.747,
-    "p@5": 0.384,
-    "avg_latency_ms": 4.688,
-    "p95_latency_ms": 8.642
+    "map": 0.7305,
+    "mrr": 0.738,
+    "ndcg@5": 0.7717,
+    "ndcg@10": 0.7832,
+    "p@5": 0.4,
+    "avg_latency_ms": 6.499,
+    "p95_latency_ms": 15.816
   }
 ]

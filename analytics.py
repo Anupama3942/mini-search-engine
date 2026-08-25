@@ -1,13 +1,15 @@
 """
-Mini Search Engine - Stage 10
-Search Analytics Engine using SQLite
+Mini Search Engine - Stage 10, 16 & 20
+Advanced Search Analytics & Experimentation Engine using SQLite
 """
 
 import sqlite3
 import datetime
 import contextlib
 from pathlib import Path
-from typing import Dict, List, Any
+from typing import Dict, List, Any, Optional
+
+import config
 from performance import calculate_percentiles
 
 DEFAULT_DB_PATH = Path(__file__).parent / "analytics.db"
@@ -25,15 +27,21 @@ def get_db_connection(db_path: Path = DEFAULT_DB_PATH):
 
 
 def init_db(db_path: Path = DEFAULT_DB_PATH) -> None:
-    """Initialize the search events table if it does not already exist."""
+    """Initialize search and click event tables if they do not already exist."""
     try:
         with get_db_connection(db_path) as conn:
+            # 1. Search Events Table
             conn.execute("""
                 CREATE TABLE IF NOT EXISTS search_events (
                     id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    request_id TEXT,
+                    session_id TEXT,
                     timestamp TEXT NOT NULL,
                     query TEXT NOT NULL,
                     normalized_query TEXT NOT NULL,
+                    search_method TEXT DEFAULT 'bm25',
+                    experiment_id TEXT,
+                    variant TEXT,
                     result_count INTEGER NOT NULL,
                     search_duration REAL NOT NULL,
                     query_parsing_time REAL DEFAULT 0.0,
@@ -47,9 +55,42 @@ def init_db(db_path: Path = DEFAULT_DB_PATH) -> None:
                     zero_result INTEGER NOT NULL
                 )
             """)
+            # Schema Migration for existing databases
+            existing_cols = {r["name"] for r in conn.execute("PRAGMA table_info(search_events)").fetchall()}
+            for col_name, col_type in [
+                ("request_id", "TEXT"),
+                ("session_id", "TEXT"),
+                ("search_method", "TEXT DEFAULT 'bm25'"),
+                ("experiment_id", "TEXT"),
+                ("variant", "TEXT")
+            ]:
+                if col_name not in existing_cols:
+                    conn.execute(f"ALTER TABLE search_events ADD COLUMN {col_name} {col_type}")
+
             conn.execute("CREATE INDEX IF NOT EXISTS idx_query ON search_events (normalized_query)")
             conn.execute("CREATE INDEX IF NOT EXISTS idx_zero ON search_events (zero_result)")
             conn.execute("CREATE INDEX IF NOT EXISTS idx_time ON search_events (timestamp)")
+            conn.execute("CREATE INDEX IF NOT EXISTS idx_req ON search_events (request_id)")
+            conn.execute("CREATE INDEX IF NOT EXISTS idx_exp ON search_events (experiment_id, variant)")
+
+            # 2. Click Events Table (Stage 20 Funnel & CTR tracking)
+            conn.execute("""
+                CREATE TABLE IF NOT EXISTS click_events (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    request_id TEXT NOT NULL,
+                    session_id TEXT,
+                    timestamp TEXT NOT NULL,
+                    doc_id TEXT NOT NULL,
+                    position INTEGER NOT NULL,
+                    experiment_id TEXT,
+                    variant TEXT,
+                    search_method TEXT DEFAULT 'bm25'
+                )
+            """)
+            conn.execute("CREATE INDEX IF NOT EXISTS idx_click_req ON click_events (request_id)")
+            conn.execute("CREATE INDEX IF NOT EXISTS idx_click_time ON click_events (timestamp)")
+            conn.execute("CREATE INDEX IF NOT EXISTS idx_click_pos ON click_events (position)")
+
             conn.commit()
     except Exception as e:
         print(f"[Analytics Warning] Could not initialize database: {e}")
@@ -71,30 +112,46 @@ def record_search(
     fuzzy_used: bool = False,
     phrase_used: bool = False,
     boolean_used: bool = False,
+    search_method: str = "bm25",
+    request_id: Optional[str] = None,
+    session_id: Optional[str] = None,
+    experiment_id: Optional[str] = None,
+    variant: Optional[str] = None,
     db_path: Path = DEFAULT_DB_PATH
 ) -> bool:
     """
     Safely record a search event to SQLite using parameterized SQL.
-    Privacy Guarantee: No IP addresses, user IDs, or personal info is collected.
-    Fault Tolerance: Catches all exceptions so search operations are never interrupted.
+    Privacy Guarantee: Respects PRIVACY_MASK_QUERIES if enabled.
     """
+    if not config.ANALYTICS_ENABLED:
+        return True
+
     try:
         timestamp = datetime.datetime.now(datetime.timezone.utc).isoformat()
-        normalized_query = query.strip().lower()
+        clean_q = query.strip().lower()
+        if config.PRIVACY_MASK_QUERIES:
+            clean_q = f"query_len_{len(clean_q)}"
+
         zero_result = 1 if result_count == 0 else 0
 
         with get_db_connection(db_path) as conn:
             conn.execute("""
                 INSERT INTO search_events (
-                    timestamp, query, normalized_query, result_count,
+                    request_id, session_id, timestamp, query, normalized_query,
+                    search_method, experiment_id, variant, result_count,
                     search_duration, query_parsing_time, term_resolution_time,
                     retrieval_time, ranking_time, query_type,
                     fuzzy_used, phrase_used, boolean_used, zero_result
-                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             """, (
+                request_id,
+                session_id,
                 timestamp,
-                query,
-                normalized_query,
+                query if not config.PRIVACY_MASK_QUERIES else "[MASKED]",
+                clean_q,
+                search_method,
+                experiment_id,
+                variant,
                 result_count,
                 search_duration,
                 query_parsing_time,
@@ -114,14 +171,47 @@ def record_search(
         return False
 
 
+def record_click(
+    request_id: str,
+    doc_id: str,
+    position: int,
+    session_id: Optional[str] = None,
+    experiment_id: Optional[str] = None,
+    variant: Optional[str] = None,
+    search_method: str = "bm25",
+    db_path: Path = DEFAULT_DB_PATH
+) -> bool:
+    """Record a user click event for search result attribution."""
+    if not config.ANALYTICS_ENABLED:
+        return True
+
+    try:
+        timestamp = datetime.datetime.now(datetime.timezone.utc).isoformat()
+        with get_db_connection(db_path) as conn:
+            conn.execute("""
+                INSERT INTO click_events (
+                    request_id, session_id, timestamp, doc_id,
+                    position, experiment_id, variant, search_method
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+            """, (
+                request_id,
+                session_id,
+                timestamp,
+                doc_id,
+                position,
+                experiment_id,
+                variant,
+                search_method
+            ))
+            conn.commit()
+        return True
+    except Exception as e:
+        print(f"[Analytics Warning] Failed to record click event: {e}")
+        return False
+
+
 def get_summary_metrics(db_path: Path = DEFAULT_DB_PATH) -> Dict[str, Any]:
-    """
-    Compute comprehensive aggregated search analytics:
-      - Total search counts & total processing time
-      - Latency statistics (Avg, Median/P50, P95, P99, Min, Max)
-      - Zero-result rates
-      - Feature usage rates (Fuzzy, Phrase, Boolean, Normal)
-    """
+    """Compute comprehensive aggregated search and performance analytics."""
     try:
         with get_db_connection(db_path) as conn:
             row = conn.execute("""
@@ -215,8 +305,114 @@ def get_summary_metrics(db_path: Path = DEFAULT_DB_PATH) -> Dict[str, Any]:
         }
 
 
+def get_ctr_analytics(db_path: Path = DEFAULT_DB_PATH) -> Dict[str, Any]:
+    """
+    Compute Click-Through Rate (CTR) metrics:
+      - Overall CTR %
+      - CTR by Rank Position (1..5)
+      - CTR by Search Ranking Method
+    """
+    try:
+        with get_db_connection(db_path) as conn:
+            # 1. Total Searches & Clicks
+            s_row = conn.execute("SELECT COUNT(*) as count FROM search_events").fetchone()
+            c_row = conn.execute("SELECT COUNT(*) as count FROM click_events").fetchone()
+
+            total_searches = s_row["count"] or 0
+            total_clicks = c_row["count"] or 0
+            overall_ctr = round((total_clicks / total_searches) * 100.0, 2) if total_searches > 0 else 0.0
+
+            # 2. Clicks by Position
+            pos_cursor = conn.execute("""
+                SELECT position, COUNT(*) as clicks
+                FROM click_events
+                GROUP BY position
+                ORDER BY position ASC
+                LIMIT 10
+            """)
+            position_clicks = [{"position": r["position"], "clicks": r["clicks"]} for r in pos_cursor.fetchall()]
+
+            # 3. CTR by Search Method
+            method_cursor = conn.execute("""
+                SELECT 
+                    s.search_method,
+                    COUNT(DISTINCT s.id) as searches,
+                    COUNT(DISTINCT c.id) as clicks
+                FROM search_events s
+                LEFT JOIN click_events c ON s.request_id = c.request_id
+                GROUP BY s.search_method
+            """)
+            method_ctr = []
+            for r in method_cursor.fetchall():
+                s_cnt = r["searches"]
+                c_cnt = r["clicks"]
+                ctr_val = round((c_cnt / s_cnt) * 100.0, 2) if s_cnt > 0 else 0.0
+                method_ctr.append({
+                    "search_method": r["search_method"] or "bm25",
+                    "searches": s_cnt,
+                    "clicks": c_cnt,
+                    "ctr_pct": ctr_val
+                })
+
+            return {
+                "total_searches": total_searches,
+                "total_clicks": total_clicks,
+                "overall_ctr_pct": overall_ctr,
+                "clicks_by_position": position_clicks,
+                "ctr_by_method": method_ctr
+            }
+    except Exception as e:
+        print(f"[Analytics Warning] Failed to compute CTR analytics: {e}")
+        return {
+            "total_searches": 0,
+            "total_clicks": 0,
+            "overall_ctr_pct": 0.0,
+            "clicks_by_position": [],
+            "ctr_by_method": []
+        }
+
+
+def get_online_experiment_summary(experiment_id: str, db_path: Path = DEFAULT_DB_PATH) -> Dict[str, Any]:
+    """Retrieve online telemetry comparison for a specific A/B experiment."""
+    try:
+        with get_db_connection(db_path) as conn:
+            cursor = conn.execute("""
+                SELECT 
+                    variant,
+                    COUNT(DISTINCT s.id) as searches,
+                    COUNT(DISTINCT c.id) as clicks,
+                    AVG(s.search_duration * 1000.0) as avg_latency_ms
+                FROM search_events s
+                LEFT JOIN click_events c ON s.request_id = c.request_id
+                WHERE s.experiment_id = ?
+                GROUP BY variant
+            """, (experiment_id,))
+
+            variants_data = {}
+            for r in cursor.fetchall():
+                v = r["variant"] or "unknown"
+                searches = r["searches"]
+                clicks = r["clicks"]
+                ctr = round((clicks / searches) * 100.0, 2) if searches > 0 else 0.0
+                variants_data[v] = {
+                    "searches": searches,
+                    "clicks": clicks,
+                    "ctr_pct": ctr,
+                    "avg_latency_ms": round(r["avg_latency_ms"] or 0.0, 2)
+                }
+
+            return {
+                "experiment_id": experiment_id,
+                "variants": variants_data,
+                "status": "active" if variants_data else "no_traffic"
+            }
+    except Exception as e:
+        print(f"[Analytics Warning] Failed to compute online experiment summary: {e}")
+        return {"experiment_id": experiment_id, "variants": {}, "status": "error"}
+
+
 def get_top_queries(limit: int = 10, db_path: Path = DEFAULT_DB_PATH) -> List[Dict[str, Any]]:
-    """Retrieve the most frequent search queries with occurrence counts and average result count."""
+    """Retrieve most frequent search queries with counts and latency."""
     try:
         with get_db_connection(db_path) as conn:
             cursor = conn.execute("""
@@ -245,7 +441,7 @@ def get_top_queries(limit: int = 10, db_path: Path = DEFAULT_DB_PATH) -> List[Di
 
 
 def get_top_zero_result_queries(limit: int = 10, db_path: Path = DEFAULT_DB_PATH) -> List[Dict[str, Any]]:
-    """Retrieve the queries that yielded zero results most frequently."""
+    """Retrieve queries that yielded zero results most frequently."""
     try:
         with get_db_connection(db_path) as conn:
             cursor = conn.execute("""
@@ -288,7 +484,8 @@ def get_recent_searches(limit: int = 15, db_path: Path = DEFAULT_DB_PATH) -> Lis
                 SELECT 
                     timestamp, query, result_count, 
                     search_duration, query_type, 
-                    fuzzy_used, phrase_used, boolean_used
+                    fuzzy_used, phrase_used, boolean_used,
+                    search_method, experiment_id, variant
                 FROM search_events
                 ORDER BY id DESC
                 LIMIT ?
@@ -300,6 +497,9 @@ def get_recent_searches(limit: int = 15, db_path: Path = DEFAULT_DB_PATH) -> Lis
                     "result_count": row["result_count"],
                     "latency_ms": round(row["search_duration"] * 1000.0, 2),
                     "query_type": row["query_type"],
+                    "search_method": row["search_method"] or "bm25",
+                    "experiment_id": row["experiment_id"],
+                    "variant": row["variant"],
                     "fuzzy_used": bool(row["fuzzy_used"]),
                     "phrase_used": bool(row["phrase_used"]),
                     "boolean_used": bool(row["boolean_used"])
@@ -309,3 +509,17 @@ def get_recent_searches(limit: int = 15, db_path: Path = DEFAULT_DB_PATH) -> Lis
     except Exception as e:
         print(f"[Analytics Warning] Failed to get recent searches: {e}")
         return []
+
+
+def cleanup_old_analytics(retention_days: int = config.ANALYTICS_RETENTION_DAYS, db_path: Path = DEFAULT_DB_PATH) -> int:
+    """Delete search and click records older than retention threshold for privacy compliance."""
+    try:
+        cutoff = (datetime.datetime.now(datetime.timezone.utc) - datetime.timedelta(days=retention_days)).isoformat()
+        with get_db_connection(db_path) as conn:
+            c1 = conn.execute("DELETE FROM search_events WHERE timestamp < ?", (cutoff,)).rowcount
+            c2 = conn.execute("DELETE FROM click_events WHERE timestamp < ?", (cutoff,)).rowcount
+            conn.commit()
+            return c1 + c2
+    except Exception as e:
+        print(f"[Analytics Warning] Failed to run retention cleanup: {e}")
+        return 0
