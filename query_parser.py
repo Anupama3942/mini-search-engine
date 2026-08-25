@@ -1,4 +1,5 @@
 import re
+from fuzzy_search import resolve_term
 
 class ASTNode:
     pass
@@ -141,6 +142,37 @@ class QueryParser:
             raise ValueError(f"Invalid search query. Unexpected operator '{token}'.")
         else:
             return TermNode(token)
+
+def resolve_ast(node, vocabulary, cache=None):
+    """
+    Traverse the AST and resolve any unknown TermNodes using fuzzy matching.
+    Phrase contents remain exact as specified in Stage 9 design.
+    Returns: (resolved_ast, corrections_dict)
+    """
+    if isinstance(node, TermNode):
+        resolved, is_fuzzy, _ = resolve_term(node.term, vocabulary, cache)
+        if is_fuzzy:
+            return TermNode(resolved), {node.term: resolved}
+        return node, {}
+        
+    elif isinstance(node, PhraseNode):
+        return node, {}
+        
+    elif isinstance(node, AndNode):
+        left_node, left_corr = resolve_ast(node.left, vocabulary, cache)
+        right_node, right_corr = resolve_ast(node.right, vocabulary, cache)
+        return AndNode(left_node, right_node), {**left_corr, **right_corr}
+        
+    elif isinstance(node, OrNode):
+        left_node, left_corr = resolve_ast(node.left, vocabulary, cache)
+        right_node, right_corr = resolve_ast(node.right, vocabulary, cache)
+        return OrNode(left_node, right_node), {**left_corr, **right_corr}
+        
+    elif isinstance(node, NotNode):
+        child_node, child_corr = resolve_ast(node.child, vocabulary, cache)
+        return NotNode(child_node), child_corr
+        
+    return node, {}
 
 def evaluate_phrase(phrase_terms, positional_index):
     """

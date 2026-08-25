@@ -8,12 +8,14 @@ Built as a learning project to understand Python fundamentals, Information Retri
 
 - Search through multiple text documents
 - Fast querying using an Inverted Index
+- Positional Index for exact phrase matching (`"exact phrase"`)
 - Text processing pipeline (Stop-word removal, Normalization, Tokenization)
 - Boolean Search (`AND`, `OR`, `NOT`, `( )`)
-- **Phrase Search (`"exact phrase"`)**
+- **Fuzzy Search & Typo Tolerance (Levenshtein Distance via Dynamic Programming)**
 - Search Ranking (TF-IDF)
 - Web Interface (Flask & HTML/CSS)
 - Snippet generation and query term highlighting
+- Graceful error handling and XSS protection
 
 ## Technologies
 
@@ -23,53 +25,72 @@ Built as a learning project to understand Python fundamentals, Information Retri
 - HTML5 & CSS3
 - `pathlib`, `string`, `collections`, `math`, `html`, `re` (Python standard library)
 
-## Stage 8 — Phrase Search
+## Stage 9 — Fuzzy Search & Typo Tolerance
 
-In Stage 8, the engine was upgraded to support exact phrase matching by introducing a **Positional Inverted Index**.
+In Stage 9, the search engine was upgraded with **Typo Tolerance** using the **Levenshtein Distance** algorithm implemented from scratch with **Dynamic Programming**.
 
-### Why a Positional Index?
-A normal inverted index (Stage 2) tells you *which* documents contain a word, but not *where* the word is located inside that document. Because phrase searching requires words to be adjacent and in a specific order, the engine now records the sequence position of every word during indexing.
+### What is Levenshtein Distance?
+Levenshtein distance measures the minimum number of single-character edits required to transform one word into another:
+1. **Insertion**: inserting a missing character (e.g., `pythn` &rarr; `python`, distance = 1)
+2. **Deletion**: removing an extra character (e.g., `programmin` &rarr; `programming`, distance = 1)
+3. **Substitution**: replacing an incorrect character (e.g., `jython` &rarr; `python`, distance = 1)
 
-### How Phrase Search Works
-When searching for `"python programming"`:
-1. The engine checks the index for `python` and `programming`.
-2. It filters down to documents that contain **both** words.
-3. For each candidate document, it inspects the positions. It verifies that a position of `programming` is exactly `+1` from a position of `python`. 
-4. If they are consecutive and in the correct order, the phrase matches!
+### Dynamic Programming Recurrence
+For two strings $A$ of length $m$ and $B$ of length $n$, the DP matrix cell $dp[i][j]$ represents the edit distance between prefixes $A[0..i]$ and $B[0..j]$:
 
-*Note: Positional checking occurs against the normalized text tokens (after punctuation and stop words are removed).*
+- **Base Cases**: $dp[i][0] = i$ (deletions), $dp[0][j] = j$ (insertions)
+- **If characters match** ($A[i-1] == B[j-1]$): $dp[i][j] = dp[i-1][j-1]$
+- **If characters differ**:
+  $$dp[i][j] = 1 + \min(\text{deletion: } dp[i-1][j], \text{insertion: } dp[i][j-1], \text{substitution: } dp[i-1][j-1])$$
+
+### Thresholds (Maximum Edit Distance)
+To prevent bad or overly aggressive matches, thresholds adapt based on word length:
+- **Length 1–3**: Max distance = 0 (exact match only)
+- **Length 4–6**: Max distance &le; 1 (e.g., `pythn` &rarr; `python`)
+- **Length 7+**: Max distance &le; 2 (e.g., `programing` &rarr; `programming`)
+
+### Exact-Match Optimization & Vocabulary Lookup
+Fuzzy matching is only executed when a term does not exist in the indexed vocabulary. If the term already exists (exact match), it is resolved instantly ($O(1)$) without invoking Levenshtein distance.
 
 ### Application Architecture
 
 ```text
                     User Query
                          ↓
-                Query Tokenizer
+                 Query Normalization
                          ↓
-                  Query Parser
+                  Query Tokenizer
+                         ↓
+                   Query Parser
+                         ↓
+                 Term Resolution
                          ↓
              ┌───────────┴───────────┐
              ↓                       ↓
-          TERM                    PHRASE
-             ↓                       ↓
-     Inverted Index        Positional Index
-             ↓                       ↓
+        Exact Match            Fuzzy Match
+             │                       │
+             │                 Levenshtein
+             │                     Distance
+             │                       │
              └───────────┬───────────┘
                          ↓
-                 Boolean Evaluation
+                  Inverted Index
                          ↓
-                Matching Documents
+                 Matching Documents
                          ↓
-                  TF-IDF Ranking
+                   TF-IDF Ranking
                          ↓
-                    Web Results
+                   Search Results
 ```
 
-### Advanced Boolean & Phrase Combinations
-Phrase searches behave as a single boolean entity, meaning they can be perfectly combined with advanced operators:
-* `"machine learning" AND python`
-* `"data science" OR "machine learning"`
-* `("deep learning" OR "neural networks") AND NOT java`
+### Algorithmic Complexity
+- **Levenshtein DP Matrix**: Time $O(m \times n)$, Space $O(m \times n)$ (or $O(\min(m, n))$ with two-row optimization).
+- **Vocabulary Search**: Compares query against vocabulary terms with a length-difference filter $|len(A) - len(B)| \le max\_dist$ to skip impossible candidates.
+- **Fuzzy Cache**: Resolved terms are cached in memory to eliminate repeated calculations for identical typos.
+
+### Boolean & Phrase Compatibility
+- **Boolean Expressions**: Typos inside Boolean queries are seamlessly resolved before evaluation (e.g. `pythn AND programing` &rarr; `python AND programming`).
+- **Phrase Searches**: Quoted phrases (e.g. `"machine learning"`) strictly preserve exact phrase matching.
 
 ## How to Install & Run
 
@@ -100,7 +121,7 @@ Phrase searches behave as a single boolean entity, meaning they can be perfectly
 
 5. **Run tests:**
    ```bash
-   python -m unittest tests/test_app.py tests/test_search.py
+   python -m unittest discover tests
    ```
 
 ## Future Roadmap
@@ -114,6 +135,6 @@ This is a multi-stage project:
 5. ✅ **Stage 5** — TF-IDF Ranking
 6. ✅ **Stage 6** — Web Interface
 7. ✅ **Stage 7** — Boolean Search 
-8. ✅ **Stage 8** — Phrase Search (current)
-9. Stage 9 — Fuzzy Search & Typo Tolerance
-10. Stage 10 — Database Integration
+8. ✅ **Stage 8** — Phrase Search
+9. ✅ **Stage 9** — Fuzzy Search & Typo Tolerance (current)
+10. Stage 10 — Search Analytics & Performance Monitoring

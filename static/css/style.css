@@ -220,6 +220,30 @@ button:hover, button:focus {
     margin-bottom: 5px;
 }
 
+.fuzzy-box {
+    margin-bottom: 12px;
+    padding: 10px 14px;
+    background-color: #fef7e0;
+    border: 1px solid #feefc3;
+    border-radius: 6px;
+}
+
+.did-you-mean {
+    color: #b06000;
+    font-size: 1.05rem;
+    margin-bottom: 4px;
+}
+
+.did-you-mean a {
+    color: #1a0dab;
+    text-decoration: underline;
+}
+
+.showing-results {
+    color: #5f6368;
+    font-size: 0.9rem;
+}
+
 .search-time {
     margin-left: 10px;
 }

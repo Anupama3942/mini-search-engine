@@ -21,18 +21,26 @@
         <div class="no-results">
             <h2>No results found for: <em>"{{ query }}"</em></h2>
             <div class="suggestions">
+                <p>No matching term or fuzzy candidate was found.</p>
                 <p>Suggestions:</p>
                 <ul>
-                    <li>Check the spelling.</li>
-                    <li>Try fewer words or check your Boolean operators.</li>
-                    <li>Try another search term.</li>
+                    <li>Check your spelling.</li>
+                    <li>Try fewer or more general keywords.</li>
+                    <li>Try different Boolean operators.</li>
                 </ul>
             </div>
         </div>
     {% else %}
         <div class="results-meta">
-            <h2>Search results for: <em>{{ query }}</em></h2>
-            <p>Search type: <strong>Boolean Search</strong></p>
+            {% if results.did_you_mean %}
+                <div class="fuzzy-box">
+                    <p class="did-you-mean">Did you mean: <a href="/search?q={{ results.did_you_mean }}"><strong>{{ results.did_you_mean }}</strong></a>?</p>
+                    <p class="showing-results">Showing results for: <strong>{{ results.did_you_mean }}</strong> (Original query: <em>{{ query }}</em>)</p>
+                </div>
+            {% else %}
+                <h2>Search results for: <em>{{ query }}</em></h2>
+            {% endif %}
+            <p>Search type: <strong>{% if results.did_you_mean %}Fuzzy & Typo Tolerant Search{% else %}Boolean Search{% endif %}</strong></p>
             <p>Results found: {{ results|length }} <span class="search-time">(Search time: {{ search_time }} seconds)</span></p>
         </div>
         

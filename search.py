@@ -1,6 +1,6 @@
 """
-Mini Search Engine - Stage 8 (Core Logic)
-Now using Phrase Search and Positional Indexes.
+Mini Search Engine - Stage 9 (Core Logic)
+Now using Fuzzy Search & Typo Tolerance with Levenshtein Distance.
 """
 
 from pathlib import Path
@@ -13,7 +13,8 @@ from query_parser import (
     tokenize_query, 
     QueryParser, 
     evaluate_query, 
-    extract_positive_terms
+    extract_positive_terms,
+    resolve_ast
 )
 
 # Predefined stop words
@@ -66,10 +67,18 @@ def generate_snippet(document_text, query_terms):
         
     for term in query_terms:
         safe_term = html.escape(term)
-        pattern = re.compile(re.escape(safe_term), re.IGNORECASE)
+        pattern = re.compile(rf"\b{re.escape(safe_term)}\b", re.IGNORECASE)
         snippet = pattern.sub(lambda m: f"<mark>{m.group(0)}</mark>", snippet)
 
     return snippet
+
+class SearchResults(list):
+    """List subclass holding search result items along with query correction metadata."""
+    def __init__(self, items=None, original_query="", did_you_mean=None, corrections=None):
+        super().__init__(items or [])
+        self.original_query = original_query
+        self.did_you_mean = did_you_mean
+        self.corrections = corrections or {}
 
 class SearchEngine:
     def __init__(self):
@@ -77,11 +86,17 @@ class SearchEngine:
         self.processed_documents = {}
         self.inverted_index = {}
         self.positional_index = {}
+        self.fuzzy_cache = {}
         
         if self.documents:
             self._build_index()
 
     def _build_index(self):
+        # Clear indexes and fuzzy cache upon rebuilding
+        self.inverted_index.clear()
+        self.positional_index.clear()
+        self.fuzzy_cache.clear()
+
         # Process and store tokens
         for filename, content in self.documents.items():
             self.processed_documents[filename] = process_text(content)
@@ -116,28 +131,42 @@ class SearchEngine:
 
     def search(self, query):
         if not self.documents:
-            return []
+            return SearchResults([], original_query=query)
             
         # 1. Tokenize and Parse the Boolean/Phrase Query
         try:
             tokens = tokenize_query(query, process_text)
             if not tokens:
-                return []
+                return SearchResults([], original_query=query)
             parser = QueryParser(tokens)
             ast = parser.parse()
             if not ast:
-                return []
+                return SearchResults([], original_query=query)
         except ValueError as e:
             return {"error": str(e)}
         
-        # 2. Evaluate Expression (Filtering)
+        # 2. Fuzzy Term Resolution (Typo Tolerance)
+        # Compare unknown query terms against the indexed vocabulary
+        vocabulary = set(self.inverted_index.keys())
+        resolved_ast, corrections = resolve_ast(ast, vocabulary, self.fuzzy_cache)
+        
+        did_you_mean = None
+        if corrections:
+            # Reconstruct corrected query for display while preserving syntax
+            corrected_query = query
+            for typo, corrected in corrections.items():
+                pattern = re.compile(rf"\b{re.escape(typo)}\b", re.IGNORECASE)
+                corrected_query = pattern.sub(corrected, corrected_query)
+            did_you_mean = corrected_query
+
+        # 3. Evaluate Expression (Filtering)
         all_docs = set(self.documents.keys())
-        matching_docs = evaluate_query(ast, self.inverted_index, all_docs, self.positional_index)
+        matching_docs = evaluate_query(resolved_ast, self.inverted_index, all_docs, self.positional_index)
         
-        # 3. Extract Positive Terms for TF-IDF Ranking
-        positive_terms = list(set(extract_positive_terms(ast)))
+        # 4. Extract Positive Terms for TF-IDF Ranking (using resolved terms)
+        positive_terms = list(set(extract_positive_terms(resolved_ast)))
         
-        # 4. Calculate Scores and Generate Results
+        # 5. Calculate Scores and Generate Results
         results = []
         for filename in matching_docs:
             doc_tokens = self.processed_documents[filename]
@@ -159,15 +188,21 @@ class SearchEngine:
                 "snippet": snippet
             })
             
-        # 5. Sort by score descending, then filename ascending (deterministic fallback)
+        # 6. Sort by score descending, then filename ascending (deterministic fallback)
         ranked_results = sorted(results, key=lambda x: (-x["score"], x["filename"]))
-        return ranked_results
+        
+        return SearchResults(
+            ranked_results, 
+            original_query=query, 
+            did_you_mean=did_you_mean, 
+            corrections=corrections
+        )
 
 
 # Keep CLI functionality
 def main():
     print("=" * 30)
-    print("  MINI SEARCH ENGINE (CLI) Stage 8")
+    print("  MINI SEARCH ENGINE (CLI) Stage 9")
     print("=" * 30)
 
     engine = SearchEngine()
@@ -188,6 +223,10 @@ def main():
         if isinstance(results, dict) and "error" in results:
             print(f"Error: {results['error']}")
             continue
+
+        if getattr(results, "did_you_mean", None):
+            print(f"\n* Did you mean: {results.did_you_mean}? *")
+            print(f"Showing results for: {results.did_you_mean} (Original: {query})")
             
         print(f"\nResults found: {len(results)}\n")
         for i, res in enumerate(results, start=1):
