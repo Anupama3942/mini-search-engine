@@ -1,0 +1,26 @@
+query_id,query,query_type,relevant_count,retrieved_count,precision,recall,f1_score,p@1,p@3,p@5,p@10,r@5,r@10,average_precision,reciprocal_rank
+q01,python,normal,4,4,1.0,1.0,1.0,1.0,1.0,0.8,0.4,1.0,1.0,1.0,1.0
+q02,java,normal,3,3,1.0,1.0,1.0,1.0,1.0,0.6,0.3,1.0,1.0,1.0,1.0
+q03,database,normal,1,1,1.0,1.0,1.0,1.0,0.3333,0.2,0.1,1.0,1.0,1.0,1.0
+q04,networking,normal,1,1,1.0,1.0,1.0,1.0,0.3333,0.2,0.1,1.0,1.0,1.0,1.0
+q05,web development,normal,4,4,1.0,1.0,1.0,1.0,1.0,0.8,0.4,1.0,1.0,1.0,1.0
+q06,python programming,normal,2,4,0.5,1.0,0.6667,1.0,0.6667,0.4,0.2,1.0,1.0,1.0,1.0
+q07,relational database mysql postgresql,normal,1,1,1.0,1.0,1.0,1.0,0.3333,0.2,0.1,1.0,1.0,1.0,1.0
+q08,internet protocols tcp ip http,normal,1,1,1.0,1.0,1.0,1.0,0.3333,0.2,0.1,1.0,1.0,1.0,1.0
+q09,python AND programming,boolean,2,4,0.5,1.0,0.6667,1.0,0.6667,0.4,0.2,1.0,1.0,1.0,1.0
+q10,python OR java,boolean,5,5,1.0,1.0,1.0,1.0,1.0,1.0,0.5,1.0,1.0,1.0,1.0
+q11,programming AND NOT java,boolean,3,3,1.0,1.0,1.0,1.0,1.0,0.6,0.3,1.0,1.0,1.0,1.0
+q12,(python OR java) AND web,boolean,2,3,0.6667,1.0,0.8,1.0,0.6667,0.4,0.2,1.0,1.0,1.0,1.0
+q13,database AND (mysql OR postgresql),boolean,1,1,1.0,1.0,1.0,1.0,0.3333,0.2,0.1,1.0,1.0,1.0,1.0
+q14,"""web development""",phrase,4,4,1.0,1.0,1.0,1.0,1.0,0.8,0.4,1.0,1.0,1.0,1.0
+q15,"""object oriented""",phrase,2,2,1.0,1.0,1.0,1.0,0.6667,0.4,0.2,1.0,1.0,1.0,1.0
+q16,"""structured data""",phrase,1,1,1.0,1.0,1.0,1.0,0.3333,0.2,0.1,1.0,1.0,1.0,1.0
+q17,"""network programming""",phrase,1,1,1.0,1.0,1.0,1.0,0.3333,0.2,0.1,1.0,1.0,1.0,1.0
+q18,"""high level""",phrase,1,1,1.0,1.0,1.0,1.0,0.3333,0.2,0.1,1.0,1.0,1.0,1.0
+q19,pythn,fuzzy,4,4,1.0,1.0,1.0,1.0,1.0,0.8,0.4,1.0,1.0,1.0,1.0
+q20,programing,fuzzy,5,6,0.8333,1.0,0.9091,1.0,0.6667,0.8,0.5,0.8,1.0,0.8767,1.0
+q21,databse,fuzzy,1,1,1.0,1.0,1.0,1.0,0.3333,0.2,0.1,1.0,1.0,1.0,1.0
+q22,netwoking,fuzzy,1,1,1.0,1.0,1.0,1.0,0.3333,0.2,0.1,1.0,1.0,1.0,1.0
+q23,pythn AND programing,fuzzy,2,4,0.5,1.0,0.6667,1.0,0.6667,0.4,0.2,1.0,1.0,1.0,1.0
+q24,quantum computing algorithms,normal,0,0,1.0,1.0,1.0,0.0,0.0,0.0,0.0,1.0,1.0,1.0,1.0
+q25,blockchain smart contracts,normal,0,0,1.0,1.0,1.0,0.0,0.0,0.0,0.0,1.0,1.0,1.0,1.0

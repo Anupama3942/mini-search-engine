@@ -1,0 +1,896 @@
+{
+  "evaluation_version": "1.0",
+  "timestamp": "2026-08-25T03:09:30Z",
+  "evaluation_duration_seconds": 0.0434,
+  "queries_evaluated": 25,
+  "summary_metrics": {
+    "precision": 0.92,
+    "recall": 1.0,
+    "f1_score": 0.9583,
+    "p@1": 0.92,
+    "p@3": 0.5733,
+    "p@5": 0.408,
+    "p@10": 0.208,
+    "r@5": 0.992,
+    "r@10": 1.0,
+    "map": 0.9951,
+    "mrr": 1.0
+  },
+  "query_type_breakdown": {
+    "normal": {
+      "query_count": 10,
+      "map": 1.0,
+      "mrr": 1.0,
+      "p@5": 0.34,
+      "r@5": 1.0
+    },
+    "boolean": {
+      "query_count": 5,
+      "map": 1.0,
+      "mrr": 1.0,
+      "p@5": 0.52,
+      "r@5": 1.0
+    },
+    "phrase": {
+      "query_count": 5,
+      "map": 1.0,
+      "mrr": 1.0,
+      "p@5": 0.36,
+      "r@5": 1.0
+    },
+    "fuzzy": {
+      "query_count": 5,
+      "map": 0.9753,
+      "mrr": 1.0,
+      "p@5": 0.48,
+      "r@5": 0.96
+    }
+  },
+  "best_performing_queries": [
+    {
+      "id": "q10",
+      "query": "python OR java",
+      "ap": 1.0,
+      "rr": 1.0
+    },
+    {
+      "id": "q01",
+      "query": "python",
+      "ap": 1.0,
+      "rr": 1.0
+    },
+    {
+      "id": "q05",
+      "query": "web development",
+      "ap": 1.0,
+      "rr": 1.0
+    },
+    {
+      "id": "q14",
+      "query": "\"web development\"",
+      "ap": 1.0,
+      "rr": 1.0
+    },
+    {
+      "id": "q19",
+      "query": "pythn",
+      "ap": 1.0,
+      "rr": 1.0
+    }
+  ],
+  "worst_performing_queries": [
+    {
+      "id": "q20",
+      "query": "programing",
+      "ap": 0.8767,
+      "rr": 1.0,
+      "false_positives": 1,
+      "false_negatives": 0
+    },
+    {
+      "id": "q24",
+      "query": "quantum computing algorithms",
+      "ap": 1.0,
+      "rr": 1.0,
+      "false_positives": 0,
+      "false_negatives": 0
+    },
+    {
+      "id": "q25",
+      "query": "blockchain smart contracts",
+      "ap": 1.0,
+      "rr": 1.0,
+      "false_positives": 0,
+      "false_negatives": 0
+    },
+    {
+      "id": "q03",
+      "query": "database",
+      "ap": 1.0,
+      "rr": 1.0,
+      "false_positives": 0,
+      "false_negatives": 0
+    },
+    {
+      "id": "q04",
+      "query": "networking",
+      "ap": 1.0,
+      "rr": 1.0,
+      "false_positives": 0,
+      "false_negatives": 0
+    }
+  ],
+  "per_query_results": [
+    {
+      "query_id": "q01",
+      "query": "python",
+      "query_type": "normal",
+      "relevant_count": 4,
+      "retrieved_count": 4,
+      "precision": 1.0,
+      "recall": 1.0,
+      "f1_score": 1.0,
+      "p@1": 1.0,
+      "p@3": 1.0,
+      "p@5": 0.8,
+      "p@10": 0.4,
+      "r@5": 1.0,
+      "r@10": 1.0,
+      "average_precision": 1.0,
+      "reciprocal_rank": 1.0,
+      "confusion_matrix": {
+        "true_positives": 4,
+        "false_positives": 0,
+        "false_negatives": 0,
+        "true_negatives": 2
+      },
+      "retrieved_documents": [
+        "test_docs.txt",
+        "python.txt",
+        "web.txt",
+        "networking.txt"
+      ],
+      "false_positives": [],
+      "false_negatives": []
+    },
+    {
+      "query_id": "q02",
+      "query": "java",
+      "query_type": "normal",
+      "relevant_count": 3,
+      "retrieved_count": 3,
+      "precision": 1.0,
+      "recall": 1.0,
+      "f1_score": 1.0,
+      "p@1": 1.0,
+      "p@3": 1.0,
+      "p@5": 0.6,
+      "p@10": 0.3,
+      "r@5": 1.0,
+      "r@10": 1.0,
+      "average_precision": 1.0,
+      "reciprocal_rank": 1.0,
+      "confusion_matrix": {
+        "true_positives": 3,
+        "false_positives": 0,
+        "false_negatives": 0,
+        "true_negatives": 3
+      },
+      "retrieved_documents": [
+        "java.txt",
+        "web.txt",
+        "networking.txt"
+      ],
+      "false_positives": [],
+      "false_negatives": []
+    },
+    {
+      "query_id": "q03",
+      "query": "database",
+      "query_type": "normal",
+      "relevant_count": 1,
+      "retrieved_count": 1,
+      "precision": 1.0,
+      "recall": 1.0,
+      "f1_score": 1.0,
+      "p@1": 1.0,
+      "p@3": 0.3333,
+      "p@5": 0.2,
+      "p@10": 0.1,
+      "r@5": 1.0,
+      "r@10": 1.0,
+      "average_precision": 1.0,
+      "reciprocal_rank": 1.0,
+      "confusion_matrix": {
+        "true_positives": 1,
+        "false_positives": 0,
+        "false_negatives": 0,
+        "true_negatives": 5
+      },
+      "retrieved_documents": [
+        "database.txt"
+      ],
+      "false_positives": [],
+      "false_negatives": []
+    },
+    {
+      "query_id": "q04",
+      "query": "networking",
+      "query_type": "normal",
+      "relevant_count": 1,
+      "retrieved_count": 1,
+      "precision": 1.0,
+      "recall": 1.0,
+      "f1_score": 1.0,
+      "p@1": 1.0,
+      "p@3": 0.3333,
+      "p@5": 0.2,
+      "p@10": 0.1,
+      "r@5": 1.0,
+      "r@10": 1.0,
+      "average_precision": 1.0,
+      "reciprocal_rank": 1.0,
+      "confusion_matrix": {
+        "true_positives": 1,
+        "false_positives": 0,
+        "false_negatives": 0,
+        "true_negatives": 5
+      },
+      "retrieved_documents": [
+        "networking.txt"
+      ],
+      "false_positives": [],
+      "false_negatives": []
+    },
+    {
+      "query_id": "q05",
+      "query": "web development",
+      "query_type": "normal",
+      "relevant_count": 4,
+      "retrieved_count": 4,
+      "precision": 1.0,
+      "recall": 1.0,
+      "f1_score": 1.0,
+      "p@1": 1.0,
+      "p@3": 1.0,
+      "p@5": 0.8,
+      "p@10": 0.4,
+      "r@5": 1.0,
+      "r@10": 1.0,
+      "average_precision": 1.0,
+      "reciprocal_rank": 1.0,
+      "confusion_matrix": {
+        "true_positives": 4,
+        "false_positives": 0,
+        "false_negatives": 0,
+        "true_negatives": 2
+      },
+      "retrieved_documents": [
+        "web.txt",
+        "python.txt",
+        "networking.txt",
+        "database.txt"
+      ],
+      "false_positives": [],
+      "false_negatives": []
+    },
+    {
+      "query_id": "q06",
+      "query": "python programming",
+      "query_type": "normal",
+      "relevant_count": 2,
+      "retrieved_count": 4,
+      "precision": 0.5,
+      "recall": 1.0,
+      "f1_score": 0.6667,
+      "p@1": 1.0,
+      "p@3": 0.6667,
+      "p@5": 0.4,
+      "p@10": 0.2,
+      "r@5": 1.0,
+      "r@10": 1.0,
+      "average_precision": 1.0,
+      "reciprocal_rank": 1.0,
+      "confusion_matrix": {
+        "true_positives": 2,
+        "false_positives": 2,
+        "false_negatives": 0,
+        "true_negatives": 2
+      },
+      "retrieved_documents": [
+        "test_docs.txt",
+        "python.txt",
+        "web.txt",
+        "networking.txt"
+      ],
+      "false_positives": [
+        "web.txt",
+        "networking.txt"
+      ],
+      "false_negatives": []
+    },
+    {
+      "query_id": "q07",
+      "query": "relational database mysql postgresql",
+      "query_type": "normal",
+      "relevant_count": 1,
+      "retrieved_count": 1,
+      "precision": 1.0,
+      "recall": 1.0,
+      "f1_score": 1.0,
+      "p@1": 1.0,
+      "p@3": 0.3333,
+      "p@5": 0.2,
+      "p@10": 0.1,
+      "r@5": 1.0,
+      "r@10": 1.0,
+      "average_precision": 1.0,
+      "reciprocal_rank": 1.0,
+      "confusion_matrix": {
+        "true_positives": 1,
+        "false_positives": 0,
+        "false_negatives": 0,
+        "true_negatives": 5
+      },
+      "retrieved_documents": [
+        "database.txt"
+      ],
+      "false_positives": [],
+      "false_negatives": []
+    },
+    {
+      "query_id": "q08",
+      "query": "internet protocols tcp ip http",
+      "query_type": "normal",
+      "relevant_count": 1,
+      "retrieved_count": 1,
+      "precision": 1.0,
+      "recall": 1.0,
+      "f1_score": 1.0,
+      "p@1": 1.0,
+      "p@3": 0.3333,
+      "p@5": 0.2,
+      "p@10": 0.1,
+      "r@5": 1.0,
+      "r@10": 1.0,
+      "average_precision": 1.0,
+      "reciprocal_rank": 1.0,
+      "confusion_matrix": {
+        "true_positives": 1,
+        "false_positives": 0,
+        "false_negatives": 0,
+        "true_negatives": 5
+      },
+      "retrieved_documents": [
+        "networking.txt"
+      ],
+      "false_positives": [],
+      "false_negatives": []
+    },
+    {
+      "query_id": "q09",
+      "query": "python AND programming",
+      "query_type": "boolean",
+      "relevant_count": 2,
+      "retrieved_count": 4,
+      "precision": 0.5,
+      "recall": 1.0,
+      "f1_score": 0.6667,
+      "p@1": 1.0,
+      "p@3": 0.6667,
+      "p@5": 0.4,
+      "p@10": 0.2,
+      "r@5": 1.0,
+      "r@10": 1.0,
+      "average_precision": 1.0,
+      "reciprocal_rank": 1.0,
+      "confusion_matrix": {
+        "true_positives": 2,
+        "false_positives": 2,
+        "false_negatives": 0,
+        "true_negatives": 2
+      },
+      "retrieved_documents": [
+        "test_docs.txt",
+        "python.txt",
+        "web.txt",
+        "networking.txt"
+      ],
+      "false_positives": [
+        "web.txt",
+        "networking.txt"
+      ],
+      "false_negatives": []
+    },
+    {
+      "query_id": "q10",
+      "query": "python OR java",
+      "query_type": "boolean",
+      "relevant_count": 5,
+      "retrieved_count": 5,
+      "precision": 1.0,
+      "recall": 1.0,
+      "f1_score": 1.0,
+      "p@1": 1.0,
+      "p@3": 1.0,
+      "p@5": 1.0,
+      "p@10": 0.5,
+      "r@5": 1.0,
+      "r@10": 1.0,
+      "average_precision": 1.0,
+      "reciprocal_rank": 1.0,
+      "confusion_matrix": {
+        "true_positives": 5,
+        "false_positives": 0,
+        "false_negatives": 0,
+        "true_negatives": 1
+      },
+      "retrieved_documents": [
+        "test_docs.txt",
+        "java.txt",
+        "python.txt",
+        "web.txt",
+        "networking.txt"
+      ],
+      "false_positives": [],
+      "false_negatives": []
+    },
+    {
+      "query_id": "q11",
+      "query": "programming AND NOT java",
+      "query_type": "boolean",
+      "relevant_count": 3,
+      "retrieved_count": 3,
+      "precision": 1.0,
+      "recall": 1.0,
+      "f1_score": 1.0,
+      "p@1": 1.0,
+      "p@3": 1.0,
+      "p@5": 0.6,
+      "p@10": 0.3,
+      "r@5": 1.0,
+      "r@10": 1.0,
+      "average_precision": 1.0,
+      "reciprocal_rank": 1.0,
+      "confusion_matrix": {
+        "true_positives": 3,
+        "false_positives": 0,
+        "false_negatives": 0,
+        "true_negatives": 3
+      },
+      "retrieved_documents": [
+        "database.txt",
+        "python.txt",
+        "test_docs.txt"
+      ],
+      "false_positives": [],
+      "false_negatives": []
+    },
+    {
+      "query_id": "q12",
+      "query": "(python OR java) AND web",
+      "query_type": "boolean",
+      "relevant_count": 2,
+      "retrieved_count": 3,
+      "precision": 0.6667,
+      "recall": 1.0,
+      "f1_score": 0.8,
+      "p@1": 1.0,
+      "p@3": 0.6667,
+      "p@5": 0.4,
+      "p@10": 0.2,
+      "r@5": 1.0,
+      "r@10": 1.0,
+      "average_precision": 1.0,
+      "reciprocal_rank": 1.0,
+      "confusion_matrix": {
+        "true_positives": 2,
+        "false_positives": 1,
+        "false_negatives": 0,
+        "true_negatives": 3
+      },
+      "retrieved_documents": [
+        "web.txt",
+        "python.txt",
+        "networking.txt"
+      ],
+      "false_positives": [
+        "networking.txt"
+      ],
+      "false_negatives": []
+    },
+    {
+      "query_id": "q13",
+      "query": "database AND (mysql OR postgresql)",
+      "query_type": "boolean",
+      "relevant_count": 1,
+      "retrieved_count": 1,
+      "precision": 1.0,
+      "recall": 1.0,
+      "f1_score": 1.0,
+      "p@1": 1.0,
+      "p@3": 0.3333,
+      "p@5": 0.2,
+      "p@10": 0.1,
+      "r@5": 1.0,
+      "r@10": 1.0,
+      "average_precision": 1.0,
+      "reciprocal_rank": 1.0,
+      "confusion_matrix": {
+        "true_positives": 1,
+        "false_positives": 0,
+        "false_negatives": 0,
+        "true_negatives": 5
+      },
+      "retrieved_documents": [
+        "database.txt"
+      ],
+      "false_positives": [],
+      "false_negatives": []
+    },
+    {
+      "query_id": "q14",
+      "query": "\"web development\"",
+      "query_type": "phrase",
+      "relevant_count": 4,
+      "retrieved_count": 4,
+      "precision": 1.0,
+      "recall": 1.0,
+      "f1_score": 1.0,
+      "p@1": 1.0,
+      "p@3": 1.0,
+      "p@5": 0.8,
+      "p@10": 0.4,
+      "r@5": 1.0,
+      "r@10": 1.0,
+      "average_precision": 1.0,
+      "reciprocal_rank": 1.0,
+      "confusion_matrix": {
+        "true_positives": 4,
+        "false_positives": 0,
+        "false_negatives": 0,
+        "true_negatives": 2
+      },
+      "retrieved_documents": [
+        "web.txt",
+        "python.txt",
+        "networking.txt",
+        "database.txt"
+      ],
+      "false_positives": [],
+      "false_negatives": []
+    },
+    {
+      "query_id": "q15",
+      "query": "\"object oriented\"",
+      "query_type": "phrase",
+      "relevant_count": 2,
+      "retrieved_count": 2,
+      "precision": 1.0,
+      "recall": 1.0,
+      "f1_score": 1.0,
+      "p@1": 1.0,
+      "p@3": 0.6667,
+      "p@5": 0.4,
+      "p@10": 0.2,
+      "r@5": 1.0,
+      "r@10": 1.0,
+      "average_precision": 1.0,
+      "reciprocal_rank": 1.0,
+      "confusion_matrix": {
+        "true_positives": 2,
+        "false_positives": 0,
+        "false_negatives": 0,
+        "true_negatives": 4
+      },
+      "retrieved_documents": [
+        "python.txt",
+        "java.txt"
+      ],
+      "false_positives": [],
+      "false_negatives": []
+    },
+    {
+      "query_id": "q16",
+      "query": "\"structured data\"",
+      "query_type": "phrase",
+      "relevant_count": 1,
+      "retrieved_count": 1,
+      "precision": 1.0,
+      "recall": 1.0,
+      "f1_score": 1.0,
+      "p@1": 1.0,
+      "p@3": 0.3333,
+      "p@5": 0.2,
+      "p@10": 0.1,
+      "r@5": 1.0,
+      "r@10": 1.0,
+      "average_precision": 1.0,
+      "reciprocal_rank": 1.0,
+      "confusion_matrix": {
+        "true_positives": 1,
+        "false_positives": 0,
+        "false_negatives": 0,
+        "true_negatives": 5
+      },
+      "retrieved_documents": [
+        "database.txt"
+      ],
+      "false_positives": [],
+      "false_negatives": []
+    },
+    {
+      "query_id": "q17",
+      "query": "\"network programming\"",
+      "query_type": "phrase",
+      "relevant_count": 1,
+      "retrieved_count": 1,
+      "precision": 1.0,
+      "recall": 1.0,
+      "f1_score": 1.0,
+      "p@1": 1.0,
+      "p@3": 0.3333,
+      "p@5": 0.2,
+      "p@10": 0.1,
+      "r@5": 1.0,
+      "r@10": 1.0,
+      "average_precision": 1.0,
+      "reciprocal_rank": 1.0,
+      "confusion_matrix": {
+        "true_positives": 1,
+        "false_positives": 0,
+        "false_negatives": 0,
+        "true_negatives": 5
+      },
+      "retrieved_documents": [
+        "networking.txt"
+      ],
+      "false_positives": [],
+      "false_negatives": []
+    },
+    {
+      "query_id": "q18",
+      "query": "\"high level\"",
+      "query_type": "phrase",
+      "relevant_count": 1,
+      "retrieved_count": 1,
+      "precision": 1.0,
+      "recall": 1.0,
+      "f1_score": 1.0,
+      "p@1": 1.0,
+      "p@3": 0.3333,
+      "p@5": 0.2,
+      "p@10": 0.1,
+      "r@5": 1.0,
+      "r@10": 1.0,
+      "average_precision": 1.0,
+      "reciprocal_rank": 1.0,
+      "confusion_matrix": {
+        "true_positives": 1,
+        "false_positives": 0,
+        "false_negatives": 0,
+        "true_negatives": 5
+      },
+      "retrieved_documents": [
+        "python.txt"
+      ],
+      "false_positives": [],
+      "false_negatives": []
+    },
+    {
+      "query_id": "q19",
+      "query": "pythn",
+      "query_type": "fuzzy",
+      "relevant_count": 4,
+      "retrieved_count": 4,
+      "precision": 1.0,
+      "recall": 1.0,
+      "f1_score": 1.0,
+      "p@1": 1.0,
+      "p@3": 1.0,
+      "p@5": 0.8,
+      "p@10": 0.4,
+      "r@5": 1.0,
+      "r@10": 1.0,
+      "average_precision": 1.0,
+      "reciprocal_rank": 1.0,
+      "confusion_matrix": {
+        "true_positives": 4,
+        "false_positives": 0,
+        "false_negatives": 0,
+        "true_negatives": 2
+      },
+      "retrieved_documents": [
+        "test_docs.txt",
+        "python.txt",
+        "web.txt",
+        "networking.txt"
+      ],
+      "false_positives": [],
+      "false_negatives": []
+    },
+    {
+      "query_id": "q20",
+      "query": "programing",
+      "query_type": "fuzzy",
+      "relevant_count": 5,
+      "retrieved_count": 6,
+      "precision": 0.8333,
+      "recall": 1.0,
+      "f1_score": 0.9091,
+      "p@1": 1.0,
+      "p@3": 0.6667,
+      "p@5": 0.8,
+      "p@10": 0.5,
+      "r@5": 0.8,
+      "r@10": 1.0,
+      "average_precision": 0.8767,
+      "reciprocal_rank": 1.0,
+      "confusion_matrix": {
+        "true_positives": 5,
+        "false_positives": 1,
+        "false_negatives": 0,
+        "true_negatives": 0
+      },
+      "retrieved_documents": [
+        "database.txt",
+        "java.txt",
+        "networking.txt",
+        "python.txt",
+        "test_docs.txt",
+        "web.txt"
+      ],
+      "false_positives": [
+        "networking.txt"
+      ],
+      "false_negatives": []
+    },
+    {
+      "query_id": "q21",
+      "query": "databse",
+      "query_type": "fuzzy",
+      "relevant_count": 1,
+      "retrieved_count": 1,
+      "precision": 1.0,
+      "recall": 1.0,
+      "f1_score": 1.0,
+      "p@1": 1.0,
+      "p@3": 0.3333,
+      "p@5": 0.2,
+      "p@10": 0.1,
+      "r@5": 1.0,
+      "r@10": 1.0,
+      "average_precision": 1.0,
+      "reciprocal_rank": 1.0,
+      "confusion_matrix": {
+        "true_positives": 1,
+        "false_positives": 0,
+        "false_negatives": 0,
+        "true_negatives": 5
+      },
+      "retrieved_documents": [
+        "database.txt"
+      ],
+      "false_positives": [],
+      "false_negatives": []
+    },
+    {
+      "query_id": "q22",
+      "query": "netwoking",
+      "query_type": "fuzzy",
+      "relevant_count": 1,
+      "retrieved_count": 1,
+      "precision": 1.0,
+      "recall": 1.0,
+      "f1_score": 1.0,
+      "p@1": 1.0,
+      "p@3": 0.3333,
+      "p@5": 0.2,
+      "p@10": 0.1,
+      "r@5": 1.0,
+      "r@10": 1.0,
+      "average_precision": 1.0,
+      "reciprocal_rank": 1.0,
+      "confusion_matrix": {
+        "true_positives": 1,
+        "false_positives": 0,
+        "false_negatives": 0,
+        "true_negatives": 5
+      },
+      "retrieved_documents": [
+        "networking.txt"
+      ],
+      "false_positives": [],
+      "false_negatives": []
+    },
+    {
+      "query_id": "q23",
+      "query": "pythn AND programing",
+      "query_type": "fuzzy",
+      "relevant_count": 2,
+      "retrieved_count": 4,
+      "precision": 0.5,
+      "recall": 1.0,
+      "f1_score": 0.6667,
+      "p@1": 1.0,
+      "p@3": 0.6667,
+      "p@5": 0.4,
+      "p@10": 0.2,
+      "r@5": 1.0,
+      "r@10": 1.0,
+      "average_precision": 1.0,
+      "reciprocal_rank": 1.0,
+      "confusion_matrix": {
+        "true_positives": 2,
+        "false_positives": 2,
+        "false_negatives": 0,
+        "true_negatives": 2
+      },
+      "retrieved_documents": [
+        "test_docs.txt",
+        "python.txt",
+        "web.txt",
+        "networking.txt"
+      ],
+      "false_positives": [
+        "web.txt",
+        "networking.txt"
+      ],
+      "false_negatives": []
+    },
+    {
+      "query_id": "q24",
+      "query": "quantum computing algorithms",
+      "query_type": "normal",
+      "relevant_count": 0,
+      "retrieved_count": 0,
+      "precision": 1.0,
+      "recall": 1.0,
+      "f1_score": 1.0,
+      "p@1": 0.0,
+      "p@3": 0.0,
+      "p@5": 0.0,
+      "p@10": 0.0,
+      "r@5": 1.0,
+      "r@10": 1.0,
+      "average_precision": 1.0,
+      "reciprocal_rank": 1.0,
+      "confusion_matrix": {
+        "true_positives": 0,
+        "false_positives": 0,
+        "false_negatives": 0,
+        "true_negatives": 6
+      },
+      "retrieved_documents": [],
+      "false_positives": [],
+      "false_negatives": []
+    },
+    {
+      "query_id": "q25",
+      "query": "blockchain smart contracts",
+      "query_type": "normal",
+      "relevant_count": 0,
+      "retrieved_count": 0,
+      "precision": 1.0,
+      "recall": 1.0,
+      "f1_score": 1.0,
+      "p@1": 0.0,
+      "p@3": 0.0,
+      "p@5": 0.0,
+      "p@10": 0.0,
+      "r@5": 1.0,
+      "r@10": 1.0,
+      "average_precision": 1.0,
+      "reciprocal_rank": 1.0,
+      "confusion_matrix": {
+        "true_positives": 0,
+        "false_positives": 0,
+        "false_negatives": 0,
+        "true_negatives": 6
+      },
+      "retrieved_documents": [],
+      "false_positives": [],
+      "false_negatives": []
+    }
+  ]
+}

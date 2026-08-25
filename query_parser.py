@@ -113,10 +113,17 @@ class QueryParser:
 
     def parse_and(self):
         node = self.parse_not()
-        while self.current() == 'AND':
-            self.consume()
-            right = self.parse_not()
-            node = AndNode(node, right)
+        while True:
+            if self.current() == 'AND':
+                self.consume()
+                right = self.parse_not()
+                node = AndNode(node, right)
+            elif self.current() not in ('OR', ')', None):
+                # Implicit AND for adjacent terms, phrases, or parenthesized expressions
+                right = self.parse_not()
+                node = AndNode(node, right)
+            else:
+                break
         return node
 
     def parse_not(self):

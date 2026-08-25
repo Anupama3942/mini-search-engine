@@ -17,8 +17,9 @@ Built as a learning project to understand Python fundamentals, Information Retri
 - **Incremental Indexing (`add_document`, `remove_document`) without full corpus re-indexing**
 - **Index Integrity Validation & JSON Serialization (`save_index`, `load_index`)**
 - **Search Analytics & Performance Monitoring (SQLite Event Logging & Dashboard)**
+- **Information Retrieval Search Quality & Relevance Evaluation Suite (MAP, MRR, P@K, R@K, F1)**
 - **System Health Check Endpoint (`/health`)**
-- Web Interface (Flask & HTML/CSS) with search term highlighting and XSS protection
+- Web Interface (Flask & HTML/CSS) with search term highlighting, analytics, and XSS protection
 
 ## Technologies
 
@@ -27,106 +28,119 @@ Built as a learning project to understand Python fundamentals, Information Retri
 - Jinja2 (Templating)
 - SQLite3 (Analytics Storage)
 - HTML5 & CSS3
-- `pathlib`, `string`, `collections`, `math`, `html`, `re`, `time`, `json`, `heapq`, `tracemalloc` (Python standard library)
+- `pathlib`, `string`, `collections`, `math`, `html`, `re`, `time`, `json`, `heapq`, `tracemalloc`, `csv` (Python standard library)
 
 ---
 
-## Stage 11 — Search Engine & Index Optimization
-
-In Stage 11, the search engine was re-engineered for **scalability, low latency, and memory efficiency** without sacrificing architectural readability.
-
-### Optimization Architecture
+## System Architecture (Stage 12)
 
 ```text
-                         SEARCH QUERY
-                              │
-                              ▼
-                       Query Processing
-                              │
-                              ▼
-                    ┌───────────────────┐
-                    │ Query Cache (LRU) │
-                    └─────────┬─────────┘
-                              │
-                     Cache Hit│ (O(1))
-                              ▼
-                           Results
-                              │
-                       Cache Miss
-                              ▼
-                    Query Optimization
-                              │
-              ┌───────────────┼───────────────┐
-              ▼               ▼               ▼
-        Exact Lookup      Boolean         Fuzzy Cache
-           (O(1))       Optimization    (Length Filter)
-              │               │                 │
-              │               │                 │
-              └───────────────┼─────────────────┘
-                              ▼
-                       Inverted Index
-                              │
-                              ▼
-                       Candidate Docs
-                              │
-                              ▼
-                     Phrase / Position
-                         Verification
-                              │
-                              ▼
-                         TF-IDF
-                      (Precomputed)
-                              │
-                              ▼
-                           Top-K
-                              │
-                              ▼
-                          Results
+                         USER
+                          │
+                          ▼
+                   Search Interface
+                          │
+                          ▼
+                    Search Engine
+                          │
+                          ▼
+                  Ranked Results
+                          │
+             ┌────────────┴────────────┐
+             │                         │
+             ▼                         ▼
+       User/Search Logs          Evaluation System
+                                       │
+                                       ▼
+                              Ground Truth Dataset
+                                       │
+                                       ▼
+                              Relevance Judgments
+                                       │
+                                       ▼
+                              Evaluation Metrics
+                                       │
+                ┌──────────────────────┼─────────────────────┐
+                ▼                      ▼                     ▼
+             Precision              Recall                 F1
+                │                      │                     │
+                └──────────────────────┼─────────────────────┘
+                                       ▼
+                                      MAP
+                                       │
+                                       ▼
+                                      MRR
+                                       │
+                                       ▼
+                              Quality Dashboard
 ```
 
-### Algorithmic Complexity Comparison
+---
 
-| Component | Baseline Approach | Optimized Approach | Complexity Improvement |
-| :--- | :--- | :--- | :--- |
-| **Query Lookups** | Repeated execution on identical queries | Bounded LRU Query Cache | $O(\text{query}) \rightarrow O(1)$ |
-| **Term Frequency (TF)** | `tokens.count(term)` scanned entire token list | Precomputed hash map `term_counts[doc][term]` | $O(N_{\text{tokens}}) \rightarrow O(1)$ |
-| **Inverse Doc Frequency** | `math.log(N / df)` recalculated every search | Precomputed `idf_cache` at index build | $O(\log) \rightarrow O(1)$ |
-| **Boolean AND** | Full candidate evaluation across all branches | Sorted size evaluation & Early Termination | Aborts on first empty set |
-| **Phrase Matching** | Scanned positions across entire document set | Intersects document candidate sets first | Skips positional checks for 90%+ docs |
-| **Fuzzy Matching** | Compared query against all vocabulary terms | Length pre-filter $|len(A) - len(B)| \le max\_dist$ | Prunes ~80% of DP calculations |
-| **Fuzzy Caching** | Recalculated distance on repeated typos | Bounded LRU Fuzzy Cache | $O(m \times n) \rightarrow O(1)$ |
-| **Startup / Loading** | Rebuilt raw files from disk on every launch | JSON Index Serialization (`save_index`/`load_index`) | Sub-millisecond warm startup |
+## Stage 12 — Search Quality Evaluation & Relevance Testing
+
+Stage 12 introduces comprehensive Information Retrieval (IR) evaluation to quantitatively measure **search result relevance and ranking quality**.
+
+### Evaluation Metrics
+
+| Metric | Definition | Purpose |
+| :--- | :--- | :--- |
+| **Precision** | $\frac{\|\text{Retrieved} \cap \text{Relevant}\|}{\|\text{Retrieved}\|}$ | Measures how many returned documents are relevant. |
+| **Recall** | $\frac{\|\text{Retrieved} \cap \text{Relevant}\|}{\|\text{Relevant}\|}$ | Measures how many relevant documents in the corpus were found. |
+| **F1-Score** | $2 \times \frac{\text{Precision} \times \text{Recall}}{\text{Precision} + \text{Recall}}$ | Harmonic mean balancing precision and recall. |
+| **Precision@K (P@K)** | $\frac{\|\text{Retrieved}[:K] \cap \text{Relevant}\|}{K}$ | Precision restricted to the top $K$ ranked results ($P@1, P@3, P@5, P@10$). |
+| **Recall@K (R@K)** | $\frac{\|\text{Retrieved}[:K] \cap \text{Relevant}\|}{\|\text{Relevant}\|}$ | Coverage of relevant documents in the top $K$ results. |
+| **Average Precision (AP)** | $\frac{\sum_{k=1}^N P@k \times \text{rel}(k)}{\|\text{Relevant}\|}$ | Rewards placing relevant documents at higher ranks. |
+| **Mean Average Precision (MAP)** | $\frac{1}{\|Q\|} \sum_{q \in Q} \text{AP}(q)$ | Macro average ranking quality across all queries. |
+| **Reciprocal Rank (RR)** | $\frac{1}{\text{rank of 1st relevant document}}$ | Measures how quickly the first relevant document is found. |
+| **Mean Reciprocal Rank (MRR)** | $\frac{1}{\|Q\|} \sum_{q \in Q} \text{RR}(q)$ | Macro average first-relevant rank quality across all queries. |
 
 ---
 
-## Benchmark Results (Before vs. After Optimization)
+## Evaluation Benchmark Results
 
-Measured using `python benchmark.py` across 15 iterations per query workload:
+Evaluated across 25 ground-truth queries using `python evaluate.py`:
 
-| Metric | Before Optimization | After Optimization | Improvement |
-| :--- | :--- | :--- | :--- |
-| **Normal Search (Avg)** | 0.293 ms | **0.034 ms** | **88.4% faster** |
-| **Boolean Search (Avg)** | 0.317 ms | **0.031 ms** | **90.2% faster** |
-| **Phrase Search (Avg)** | 0.130 ms | **0.022 ms** | **83.1% faster** |
-| **Fuzzy Search (Avg)** | 0.200 ms | **0.252 ms** | Length filtered & cached |
-| **Median (P50) Latency** | 0.237 ms | **0.009 ms** | **96.2% faster** |
-| **Overall Mean Latency** | 0.243 ms | **0.085 ms** | **65.0% faster** |
-| **Query Cache Hit Rate** | 0.0% | **93.33%** | Instantaneous responses |
-| **Index Throughput** | ~3,500 docs/sec | **~6,000 docs/sec** | **71.4% higher throughput** |
+```text
+====================================================================
+       MINI SEARCH ENGINE - SEARCH QUALITY EVALUATION (STAGE 12)
+====================================================================
 
----
+[1] DATASET INTEGRITY: PASSED (Version: 1.0, Queries: 25)
 
-## Corpus Scalability Benchmark (Synthetic Documents)
+[2] OVERALL RELEVANCE & RANKING METRICS
+--------------------------------------------------------------------
+  Precision@1  (P@1)  : 0.9200   |  Recall@5   (R@5)  : 0.9920
+  Precision@3  (P@3)  : 0.5733   |  Recall@10  (R@10) : 1.0000
+  Precision@5  (P@5)  : 0.4080   |  F1-Score          : 0.9583
+  Precision@10 (P@10) : 0.2080   |  Evaluation Time   : 0.043 s
+  Mean Avg Precision (MAP) : 0.9951
+  Mean Recip. Rank   (MRR) : 1.0000
+--------------------------------------------------------------------
 
-Tested across growing document corpus sizes to verify linearity and memory boundaries:
+[3] QUERY TYPE BREAKDOWN
+Query Type       | Count  | MAP      | MRR      | P@1      | R@5     
+--------------------------------------------------------------------
+Normal           | 10     | 1.0000   | 1.0000   | 0.9000   | 1.0000  
+Boolean          | 5      | 1.0000   | 1.0000   | 1.0000   | 1.0000  
+Phrase           | 5      | 1.0000   | 1.0000   | 1.0000   | 1.0000  
+Fuzzy            | 5      | 0.9753   | 1.0000   | 0.8000   | 0.9600  
+--------------------------------------------------------------------
 
-| Documents | Index Build Time | Throughput | Avg Query Latency | P95 Query Latency | Heap Memory |
-| :--- | :--- | :--- | :--- | :--- | :--- |
-| **100** | 17.00 ms | 5,918.8 docs/sec | 0.455 ms | 2.693 ms | 1.33 MB |
-| **500** | 83.88 ms | 6,063.1 docs/sec | 2.002 ms | 10.744 ms | 5.67 MB |
-| **1,000** | 172.12 ms | 6,095.3 docs/sec | 4.147 ms | 22.379 ms | 9.66 MB |
-| **5,000** | 862.47 ms | 5,942.4 docs/sec | 20.568 ms | 108.261 ms | 44.03 MB |
-| **10,000** | 5,263.55 ms | 2,102.7 docs/sec | 156.707 ms | 766.723 ms | 97.50 MB |
+[4] RANKING COMPARISON (TF-IDF vs Raw Frequency)
+Ranking Method         | MAP      | MRR      | P@1      | R@5     
+--------------------------------------------------------------------
+TF-IDF Ranking         | 0.9951   | 1.0000   | 0.9200   | 0.9920  
+Frequency Ranking      | 0.9204   | 0.9200   | 0.9200   | 0.9920  
+--------------------------------------------------------------------
+
+[5] FUZZY SEARCH TRADE-OFF (Typo Queries)
+Mode               | MAP      | MRR      | P@5      | R@5     
+--------------------------------------------------------------------
+Fuzzy ON (Stage 9) | 0.9753   | 1.0000   | 0.4800   | 0.9600  
+Fuzzy OFF (Exact)  | 0.0000   | 0.0000   | 0.0000   | 0.0000  
+--------------------------------------------------------------------
+```
 
 ---
 
@@ -151,21 +165,21 @@ Tested across growing document corpus sizes to verify linearity and memory bound
    python app.py
    ```
    - Search Homepage: `http://127.0.0.1:5000`
-   - Analytics Dashboard: `http://127.0.0.1:5000/analytics`
+   - Analytics & Quality Dashboard: `http://127.0.0.1:5000/analytics`
+   - Quality API: `http://127.0.0.1:5000/api/analytics/quality`
    - Health Status: `http://127.0.0.1:5000/health`
-   - Cache API: `http://127.0.0.1:5000/api/analytics/cache`
 
-4. **Run the Automated Performance & Scaling Benchmark Suite:**
+4. **Run the Search Quality Evaluation Suite:**
+   ```bash
+   python evaluate.py
+   ```
+
+5. **Run the Performance & Scalability Benchmark Suite:**
    ```bash
    python benchmark.py
    ```
 
-5. **(Optional) Run the CLI version:**
-   ```bash
-   python search.py
-   ```
-
-6. **Run all tests:**
+6. **Run all unit & regression tests:**
    ```bash
    python -m unittest discover tests
    ```
@@ -186,5 +200,6 @@ This is a multi-stage project:
 8. ✅ **Stage 8** — Phrase Search
 9. ✅ **Stage 9** — Fuzzy Search & Typo Tolerance
 10. ✅ **Stage 10** — Search Analytics & Performance Monitoring
-11. ✅ **Stage 11** — Search Engine & Index Optimization (current)
-12. Stage 12 — Search Quality Evaluation & Relevance Testing
+11. ✅ **Stage 11** — Search Engine & Index Optimization
+12. ✅ **Stage 12** — Search Quality Evaluation & Relevance Testing (current)
+13. Stage 13 — Advanced Ranking & BM25

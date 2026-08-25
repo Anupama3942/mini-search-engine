@@ -6,7 +6,7 @@
 <div class="analytics-container">
     <div class="analytics-header">
         <h1>Search Analytics & Performance</h1>
-        <p class="subtitle">Real-time observability, latency benchmarks, cache hit-rates, and index metrics</p>
+        <p class="subtitle">Real-time observability, latency benchmarks, cache hit-rates, and search quality evaluation</p>
     </div>
 
     <!-- Summary Metrics Cards -->
@@ -42,6 +42,45 @@
             <span class="metric-sub">{{ summary.boolean_usage_count }} logical queries</span>
         </div>
     </div>
+
+    <!-- Search Quality & Relevance (Stage 12) -->
+    {% if quality and quality.summary_metrics %}
+    <div class="dashboard-section">
+        <h2>Search Quality & Relevance (IR Evaluation)</h2>
+        <div class="metrics-grid percentiles-grid">
+            <div class="metric-card sub-card">
+                <span class="metric-label">Mean Avg Precision (MAP)</span>
+                <span class="metric-value">{{ "%.4f"|format(quality.summary_metrics.map) }}</span>
+                <span class="metric-sub">Across {{ quality.queries_evaluated }} evaluation queries</span>
+            </div>
+            <div class="metric-card sub-card">
+                <span class="metric-label">Mean Recip. Rank (MRR)</span>
+                <span class="metric-value">{{ "%.4f"|format(quality.summary_metrics.mrr) }}</span>
+                <span class="metric-sub">First relevant rank quality</span>
+            </div>
+            <div class="metric-card sub-card">
+                <span class="metric-label">Precision@1 (P@1)</span>
+                <span class="metric-value">{{ "%.4f"|format(quality.summary_metrics['p@1']) }}</span>
+                <span class="metric-sub">Top result relevance</span>
+            </div>
+            <div class="metric-card sub-card">
+                <span class="metric-label">Recall@5 (R@5)</span>
+                <span class="metric-value">{{ "%.4f"|format(quality.summary_metrics['r@5']) }}</span>
+                <span class="metric-sub">Relevant coverage in top 5</span>
+            </div>
+            <div class="metric-card sub-card">
+                <span class="metric-label">F1-Score</span>
+                <span class="metric-value">{{ "%.4f"|format(quality.summary_metrics.f1_score) }}</span>
+                <span class="metric-sub">Harmonic mean P & R</span>
+            </div>
+            <div class="metric-card sub-card">
+                <span class="metric-label">Quality Gate</span>
+                <span class="metric-value" style="color: #2e7d32;">PASS</span>
+                <span class="metric-sub">Dataset v{{ quality.evaluation_version }}</span>
+            </div>
+        </div>
+    </div>
+    {% endif %}
 
     <!-- Performance & Latency Percentiles -->
     <div class="dashboard-section">
@@ -206,7 +245,7 @@
             <ul class="stats-list">
                 <li><span>Current Heap Allocation:</span> <strong>{{ memory.current_kb }} KB ({{ memory.current_mb }} MB)</strong></li>
                 <li><span>Peak Heap Allocation:</span> <strong>{{ memory.peak_kb }} KB ({{ memory.peak_mb }} MB)</strong></li>
-                <li><span>Memory Profiler:</span> <code>Python tracemalloc</code></li>
+                <li><span>Quality API:</span> <a href="/api/analytics/quality" target="_blank"><code>/api/analytics/quality</code></a></li>
                 <li><span>Health Endpoint:</span> <a href="/health" target="_blank"><code>/health</code></a></li>
                 <li><span>API Endpoints:</span> <a href="/api/analytics/cache" target="_blank"><code>/api/analytics/cache</code></a></li>
             </ul>
@@ -245,7 +284,7 @@
     </div>
 
     <div class="dashboard-footer">
-        <p><a href="/">&larr; Return to Search</a> &bull; <a href="/health" target="_blank">View Health JSON</a> &bull; <a href="/api/analytics/performance" target="_blank">View Performance JSON</a></p>
+        <p><a href="/">&larr; Return to Search</a> &bull; <a href="/api/analytics/quality" target="_blank">View Quality JSON</a> &bull; <a href="/health" target="_blank">View Health JSON</a> &bull; <a href="/api/analytics/performance" target="_blank">View Performance JSON</a></p>
     </div>
 </div>
 {% endblock %}

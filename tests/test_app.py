@@ -122,6 +122,14 @@ class TestAppRoutes(unittest.TestCase):
         self.assertIn('total_documents', data)
         self.assertIn('vocabulary_size', data)
 
+    def test_api_analytics_quality(self):
+        response = self.app.get('/api/analytics/quality')
+        self.assertEqual(response.status_code, 200)
+        data = response.get_json()
+        self.assertIn('summary_metrics', data)
+        self.assertIn('map', data['summary_metrics'])
+        self.assertIn('mrr', data['summary_metrics'])
+
 
 if __name__ == '__main__':
     unittest.main()

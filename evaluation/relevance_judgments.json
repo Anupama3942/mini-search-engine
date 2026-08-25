@@ -1,0 +1,156 @@
+{
+  "version": "1.0",
+  "description": "Ground truth relevance judgments for Mini Search Engine Stage 12 Evaluation",
+  "queries": [
+    {
+      "query_id": "q01",
+      "query": "python",
+      "query_type": "normal",
+      "relevant_documents": ["python.txt", "test_docs.txt", "web.txt", "networking.txt"]
+    },
+    {
+      "query_id": "q02",
+      "query": "java",
+      "query_type": "normal",
+      "relevant_documents": ["java.txt", "web.txt", "networking.txt"]
+    },
+    {
+      "query_id": "q03",
+      "query": "database",
+      "query_type": "normal",
+      "relevant_documents": ["database.txt"]
+    },
+    {
+      "query_id": "q04",
+      "query": "networking",
+      "query_type": "normal",
+      "relevant_documents": ["networking.txt"]
+    },
+    {
+      "query_id": "q05",
+      "query": "web development",
+      "query_type": "normal",
+      "relevant_documents": ["web.txt", "python.txt", "database.txt", "networking.txt"]
+    },
+    {
+      "query_id": "q06",
+      "query": "python programming",
+      "query_type": "normal",
+      "relevant_documents": ["python.txt", "test_docs.txt"]
+    },
+    {
+      "query_id": "q07",
+      "query": "relational database mysql postgresql",
+      "query_type": "normal",
+      "relevant_documents": ["database.txt"]
+    },
+    {
+      "query_id": "q08",
+      "query": "internet protocols tcp ip http",
+      "query_type": "normal",
+      "relevant_documents": ["networking.txt"]
+    },
+    {
+      "query_id": "q09",
+      "query": "python AND programming",
+      "query_type": "boolean",
+      "relevant_documents": ["python.txt", "test_docs.txt"]
+    },
+    {
+      "query_id": "q10",
+      "query": "python OR java",
+      "query_type": "boolean",
+      "relevant_documents": ["python.txt", "java.txt", "web.txt", "networking.txt", "test_docs.txt"]
+    },
+    {
+      "query_id": "q11",
+      "query": "programming AND NOT java",
+      "query_type": "boolean",
+      "relevant_documents": ["python.txt", "database.txt", "test_docs.txt"]
+    },
+    {
+      "query_id": "q12",
+      "query": "(python OR java) AND web",
+      "query_type": "boolean",
+      "relevant_documents": ["python.txt", "web.txt"]
+    },
+    {
+      "query_id": "q13",
+      "query": "database AND (mysql OR postgresql)",
+      "query_type": "boolean",
+      "relevant_documents": ["database.txt"]
+    },
+    {
+      "query_id": "q14",
+      "query": "\"web development\"",
+      "query_type": "phrase",
+      "relevant_documents": ["web.txt", "python.txt", "database.txt", "networking.txt"]
+    },
+    {
+      "query_id": "q15",
+      "query": "\"object oriented\"",
+      "query_type": "phrase",
+      "relevant_documents": ["java.txt", "python.txt"]
+    },
+    {
+      "query_id": "q16",
+      "query": "\"structured data\"",
+      "query_type": "phrase",
+      "relevant_documents": ["database.txt"]
+    },
+    {
+      "query_id": "q17",
+      "query": "\"network programming\"",
+      "query_type": "phrase",
+      "relevant_documents": ["networking.txt"]
+    },
+    {
+      "query_id": "q18",
+      "query": "\"high level\"",
+      "query_type": "phrase",
+      "relevant_documents": ["python.txt"]
+    },
+    {
+      "query_id": "q19",
+      "query": "pythn",
+      "query_type": "fuzzy",
+      "relevant_documents": ["python.txt", "test_docs.txt", "web.txt", "networking.txt"]
+    },
+    {
+      "query_id": "q20",
+      "query": "programing",
+      "query_type": "fuzzy",
+      "relevant_documents": ["python.txt", "java.txt", "database.txt", "web.txt", "test_docs.txt"]
+    },
+    {
+      "query_id": "q21",
+      "query": "databse",
+      "query_type": "fuzzy",
+      "relevant_documents": ["database.txt"]
+    },
+    {
+      "query_id": "q22",
+      "query": "netwoking",
+      "query_type": "fuzzy",
+      "relevant_documents": ["networking.txt"]
+    },
+    {
+      "query_id": "q23",
+      "query": "pythn AND programing",
+      "query_type": "fuzzy",
+      "relevant_documents": ["python.txt", "test_docs.txt"]
+    },
+    {
+      "query_id": "q24",
+      "query": "quantum computing algorithms",
+      "query_type": "normal",
+      "relevant_documents": []
+    },
+    {
+      "query_id": "q25",
+      "query": "blockchain smart contracts",
+      "query_type": "normal",
+      "relevant_documents": []
+    }
+  ]
+}

@@ -1,6 +1,6 @@
 """
-Mini Search Engine - Stage 11 (Web Application)
-Flask Web Server with Search Analytics, Performance Dashboard, Health Checks, and API Endpoints.
+Mini Search Engine - Stage 12 (Web Application)
+Flask Web Server with Search Analytics, Performance Dashboard, Health Checks, Quality Evaluation, and API Endpoints.
 """
 
 from flask import Flask, render_template, request, jsonify
@@ -14,12 +14,13 @@ from analytics import (
     get_recent_searches
 )
 from performance import get_memory_usage
+from evaluation.evaluator import SearchEvaluator
 
 app = Flask(__name__)
 
 # Initialize search engine in memory when the app starts
-# This loads, indexes, precomputes stats, and warms caches
 search_engine = SearchEngine()
+evaluator = SearchEvaluator()
 
 
 @app.route("/")
@@ -58,7 +59,7 @@ def search():
 
 @app.route("/analytics")
 def analytics_dashboard():
-    """Search analytics and system performance monitoring dashboard."""
+    """Search analytics, system performance, and search quality monitoring dashboard."""
     summary = get_summary_metrics()
     top_queries = get_top_queries(limit=10)
     zero_queries = get_top_zero_result_queries(limit=10)
@@ -68,6 +69,11 @@ def analytics_dashboard():
     memory_stats = get_memory_usage()
     query_cache_stats = search_engine.query_cache.get_stats()
     fuzzy_cache_stats = search_engine.fuzzy_cache.get_stats()
+
+    # Search Quality Metrics (Stage 12)
+    quality_report = evaluator.evaluate_engine(search_engine, top_k=10)
+    ranking_comparison = evaluator.compare_ranking_methods(search_engine)
+    fuzzy_tradeoff = evaluator.evaluate_fuzzy_tradeoff(search_engine)
 
     return render_template(
         "analytics.html",
@@ -79,7 +85,10 @@ def analytics_dashboard():
         index_stats=index_stats,
         memory=memory_stats,
         query_cache_stats=query_cache_stats,
-        fuzzy_cache_stats=fuzzy_cache_stats
+        fuzzy_cache_stats=fuzzy_cache_stats,
+        quality=quality_report,
+        ranking_comparison=ranking_comparison,
+        fuzzy_tradeoff=fuzzy_tradeoff
     )
 
 
@@ -122,6 +131,13 @@ def api_performance():
         "query_cache": search_engine.query_cache.get_stats(),
         "fuzzy_cache": search_engine.fuzzy_cache.get_stats()
     })
+
+
+@app.route("/api/analytics/quality")
+def api_quality():
+    """JSON API endpoint returning Information Retrieval relevance and quality metrics."""
+    report = evaluator.evaluate_engine(search_engine, top_k=10)
+    return jsonify(report)
 
 
 @app.route("/api/analytics/index")
