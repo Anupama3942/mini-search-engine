@@ -1,0 +1,25 @@
+[Unit]
+Description=Mini Search Engine Production Service
+After=network.target
+
+[Service]
+Type=simple
+User=www-data
+Group=www-data
+WorkingDirectory=/var/www/search-engine
+Environment="PATH=/var/www/search-engine/.venv/bin"
+EnvironmentFile=/var/www/search-engine/.env
+ExecStart=/var/www/search-engine/.venv/bin/python app.py
+Restart=always
+RestartSec=5
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=search-engine
+
+# Security sandboxing
+ProtectSystem=full
+ProtectHome=true
+NoNewPrivileges=true
+
+[Install]
+WantedBy=multi-user.target

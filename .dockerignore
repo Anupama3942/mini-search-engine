@@ -1,0 +1,29 @@
+# Git
+.git
+.gitignore
+
+# Python virtual environment and bytecode
+.venv
+venv
+ENV
+__pycache__
+*.pyc
+*.pyo
+*.pyd
+
+# Local environment secrets
+.env
+.env.local
+
+# Test outputs and reports
+.pytest_cache
+.coverage
+htmlcov
+reports/*.csv
+reports/*.json
+
+# Scratch and temp files
+scratch/
+tmp/
+*.tmp
+*.log

@@ -1,0 +1,57 @@
+[
+  {
+    "pipeline": "BM25 (Sparse)",
+    "method_code": "bm25",
+    "map": 0.9884,
+    "mrr": 1.0,
+    "ndcg@5": 0.99,
+    "ndcg@10": 0.9948,
+    "p@5": 0.408,
+    "avg_latency_ms": 6.762,
+    "p95_latency_ms": 13.871
+  },
+  {
+    "pipeline": "Semantic (Dense)",
+    "method_code": "semantic",
+    "map": 0.8347,
+    "mrr": 0.8667,
+    "ndcg@5": 0.8467,
+    "ndcg@10": 0.8698,
+    "p@5": 0.384,
+    "avg_latency_ms": 9.874,
+    "p95_latency_ms": 13.934
+  },
+  {
+    "pipeline": "Hybrid (Sparse+Dense)",
+    "method_code": "hybrid",
+    "map": 0.8816,
+    "mrr": 0.92,
+    "ndcg@5": 0.8806,
+    "ndcg@10": 0.9037,
+    "p@5": 0.384,
+    "avg_latency_ms": 6.581,
+    "p95_latency_ms": 7.894
+  },
+  {
+    "pipeline": "BM25 -> LTR (Two-Stage)",
+    "method_code": "bm25_ltr",
+    "map": 0.9671,
+    "mrr": 0.9733,
+    "ndcg@5": 0.9738,
+    "ndcg@10": 0.9786,
+    "p@5": 0.408,
+    "avg_latency_ms": 0.763,
+    "p95_latency_ms": 2.071
+  },
+  {
+    "pipeline": "Hybrid -> LTR (Two-Stage)",
+    "method_code": "hybrid_ltr",
+    "map": 0.6806,
+    "mrr": 0.6793,
+    "ndcg@5": 0.7212,
+    "ndcg@10": 0.747,
+    "p@5": 0.384,
+    "avg_latency_ms": 4.688,
+    "p95_latency_ms": 8.642
+  }
+]
